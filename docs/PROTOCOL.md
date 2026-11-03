@@ -20,6 +20,8 @@ Version `0.2.0-alpha.1`. This is a project-specific protocol, **not a tus implem
 
 Expiry is absolute from creation; default 24 hours. Resume after reload requires the same cookie and source file reselection. Restart restores the persisted offset and truncates an uncommitted tail. Hashes detect corruption; they do not authenticate the host without trusted transport.
 
+Use one live upload tab per server/origin in this alpha. The UI excludes duplicate pending-ID ownership within one app and preserves distinct same-metadata/different-content records. Cookies/resume records are shared across tabs; cross-tab claims are not coordinated. Two tabs can therefore reference one pending upload, and cancelling it in either can discard the other's progress. Source/completed files are unaffected; a missing pending upload is retried from zero. Cross-tab claim coordination is future work, not a tested guarantee.
+
 Legacy `POST /api/upload` accepts raw bytes with URL-encoded `x-file-name`, optional `x-file-size`, `x-file-type` and `x-file-sha256`. It streams one request without resume. Prefer resumable flow for large files. No multipart/base64 is used.
 
 ## Files, chat and events

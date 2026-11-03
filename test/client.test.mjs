@@ -36,7 +36,7 @@ class Element {
 }
 
 function fixtureServer() {
-  return { authenticated: true, clientId: 'fixture-client', uploads: new Map(), completed: new Map(), sequence: 0, active: 0, peak: 0, createCalls: 0, logoutCalls: 0, failRefresh: false, failLogout: false };
+  return { authenticated: true, clientId: 'fixture-client', uploads: new Map(), completed: new Map(), sequence: 0, active: 0, peak: 0, createCalls: 0, deleteCalls: 0, logoutCalls: 0, failRefresh: false, failLogout: false };
 }
 
 function createClient(server = fixtureServer(), storage = new Map()) {
@@ -103,7 +103,12 @@ function createClient(server = fixtureServer(), storage = new Map()) {
       const upload = server.uploads.get(match[1]);
       if (!upload) return response({ message: 'Not found' }, 404);
       if (options.method === 'HEAD') return new Response(null, { status: 200, headers: { 'Upload-Offset': String(upload.offset) } });
-      if (options.method === 'DELETE') { server.uploads.delete(match[1]); return response({ ok: true }); }
+      if (options.method === 'DELETE') {
+        server.deleteCalls++;
+        const override = await server.deleteUpload?.(match[1]);
+        if (override) return override;
+        server.uploads.delete(match[1]); return response({ ok: true });
+      }
       if (match[2] && options.method === 'POST') {
         assert.equal(upload.offset, upload.size);
         assert.equal(crypto.createHash('sha256').update(Buffer.concat(upload.chunks)).digest('hex'), upload.sha256);
@@ -212,6 +217,74 @@ test('client cancellation aborts a live request and deletes its partial upload',
   assert.equal(client.server.active, 0);
   assert.equal(client.server.uploads.has(uploadId), false);
   assert.equal(client.server.completed.has(uploadId), false);
+});
+
+test('a repeated file selection owns a separate upload and cancellation preserves the first partial', async t => {
+  const client = createClient(); t.after(() => client.dispose()); await ready(client);
+  const file = new File(['ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'], 'duplicate.txt', { lastModified: 250 });
+  client.selectFiles([file]);
+  await until(() => client.transfers()[0]?.offset >= 4 && client.server.active > 0, 'first duplicate has a committed chunk');
+  const first = client.transfers()[0];
+  uploadButton(first, 'pause').click();
+  await until(() => !first.running, 'first duplicate is paused');
+  const firstId = first.uploadId;
+  const firstOffset = client.server.uploads.get(firstId).offset;
+
+  client.selectFiles([file]);
+  await until(() => client.transfers()[1]?.uploadId && client.server.active > 0, 'second duplicate has a live upload');
+  const second = client.transfers()[1]; const secondId = second.uploadId;
+  uploadButton(second, 'cancel').click();
+  await until(() => second.phase === 'cancelled' && !second.running, 'second duplicate is cancelled');
+
+  assert.ok(client.server.uploads.has(firstId), 'cancelling the second selection preserves the first partial');
+  assert.equal(client.server.uploads.get(firstId).offset, firstOffset);
+  assert.notEqual(secondId, firstId, 'each transfer has exclusive ownership of its upload ID');
+  assert.equal(client.server.uploads.has(secondId), false);
+  assert.ok(JSON.parse(client.storage.get('mckl_uploads_v1')).some(record => record.id === firstId));
+  uploadButton(first, 'resume').click();
+  await until(() => first.phase === 'done', 'first duplicate resumes to completion');
+  assert.equal(client.server.createCalls, 2);
+  assert.equal(client.server.completed.get(firstId).offset, file.size);
+});
+
+test('same-metadata files with different contents retain distinct resumable sessions', async t => {
+  const server = fixtureServer(); const storage = new Map(); const first = createClient(server, storage);
+  t.after(() => first.dispose()); await ready(first);
+  const files = [new File(['A'.repeat(36)], 'same.txt', { lastModified: 275 }), new File(['B'.repeat(36)], 'same.txt', { lastModified: 275 })];
+  const ids = [];
+  for (const [index, file] of files.entries()) {
+    first.selectFiles([file]);
+    await until(() => first.transfers()[index]?.offset >= 4 && server.active > 0, 'same-metadata file has a committed chunk');
+    const item = first.transfers()[index];
+    uploadButton(item, 'pause').click();
+    await until(() => !item.running, 'same-metadata file is paused');
+    ids.push(item.uploadId);
+  }
+  assert.notEqual(ids[0], ids[1]);
+  assert.equal(JSON.parse(storage.get('mckl_uploads_v1')).length, 2, 'metadata collisions retain both source hashes');
+  first.dispose();
+
+  const reloaded = createClient(server, storage); t.after(() => reloaded.dispose()); await ready(reloaded);
+  reloaded.selectFiles(files);
+  await until(() => reloaded.transfers().every(item => item.phase === 'done') && server.completed.size === 2, 'both distinct sources resume');
+  assert.equal(server.createCalls, 2, 'both sources reuse their original upload sessions');
+  for (const [index, id] of ids.entries()) assert.equal(Buffer.concat(server.completed.get(id).chunks).toString(), await files[index].text());
+});
+
+test('repeated cancellation waits for one server deletion before changing state', async t => {
+  const client = createClient(); t.after(() => client.dispose()); await ready(client);
+  client.selectFiles([new File(['ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'], 'cancel-twice.txt', { lastModified: 290 })]);
+  await until(() => client.server.active > 0, 'request before repeated cancellation');
+  const item = client.transfers()[0];
+  uploadButton(item, 'pause').click();
+  await until(() => !item.running, 'paused request before repeated cancellation');
+  const deletions = [];
+  client.server.deleteUpload = () => new Promise(resolve => deletions.push(resolve));
+  uploadButton(item, 'cancel').click();
+  uploadButton(item, 'cancel').click();
+  try { assert.equal(client.server.deleteCalls, 1, 'only one deletion may own the cancellation result'); }
+  finally { for (const resolve of deletions) resolve(null); }
+  await until(() => item.phase === 'cancelled', 'confirmed single cancellation');
 });
 
 test('client reports logout only after server confirmation and clears resumable ownership', async t => {

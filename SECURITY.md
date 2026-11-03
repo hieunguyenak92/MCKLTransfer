@@ -14,6 +14,7 @@
 - Use a dedicated local data directory with restrictive OS permissions and one server process. Do not allow untrusted local writers, network-share semantics or cloud sync to alter internal state. Quotas are application checks, not a replacement for OS storage limits.
 - Keep data directories, backups, logs, environment files, keys and real screenshots out of source/release artifacts. The exporter does not inspect unrelated Git history or arbitrary third-party installers.
 - Keep the browser open for transfers. Mobile/background behavior and real multi-device throughput need device-specific verification. No remote control, shell execution or preview of uploaded active content is provided.
+- Use one upload tab per server/origin. Multiple tabs share resume state and can cancel the same pending upload, losing its progress; source files and completed files are unaffected. Cross-tab ownership is not coordinated in this alpha.
 
 ## Reporting a vulnerability
 

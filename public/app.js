@@ -259,10 +259,13 @@ function resumeRecords() {
   const records = readStored(RESUME_STORAGE, []);
   return Array.isArray(records) ? records.filter(record => record && typeof record.id === 'string' && typeof record.key === 'string').slice(-32) : [];
 }
-function findResume(item) { return resumeRecords().find(record => record.key === fileKey(item.file) && record.sha256 === item.sha256); }
+function findResume(item) {
+  return resumeRecords().find(record => record.key === fileKey(item.file) && record.sha256 === item.sha256
+    && ![...state.transfers.values()].some(other => other !== item && other.uploadId === record.id));
+}
 function rememberUpload(item) {
   if (!item.uploadId || !item.sha256) return;
-  const records = resumeRecords().filter(record => record.key !== fileKey(item.file));
+  const records = resumeRecords().filter(record => record.id !== item.uploadId);
   records.push({ id: item.uploadId, key: fileKey(item.file), sha256: item.sha256, createdAt: Date.now() });
   writeStored(RESUME_STORAGE, records.slice(-32));
 }
@@ -357,7 +360,7 @@ async function finishCancel(item) {
   finally { trimTransfers(); scheduleTransfers(); }
 }
 function cancelTransfer(item) {
-  if (item.phase === 'verifying' || item.phase === 'done') return;
+  if (['verifying', 'done', 'cancelling'].includes(item.phase)) return;
   item.intent = 'cancel'; item.phase = 'cancelling'; item.controller?.abort();
   if (!item.running) void finishCancel(item);
   scheduleTransfers();

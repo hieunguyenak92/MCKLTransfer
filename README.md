@@ -20,6 +20,7 @@ Mặc định HTTP không mã hóa: chỉ dùng trên mạng bạn kiểm soát 
 
 - Chọn/kéo nhiều file; hàng đợi toàn ứng dụng truyền tối đa hai file cùng lúc, có tốc độ, ETA, tạm dừng, tiếp tục, thử lại và hủy.
 - Sau mất mạng hoặc tải lại trang, chọn lại đúng file để tiếp tục. Cần giữ cookie của thiết bị và upload chưa hết hạn. Trình duyệt không tự giữ quyền đọc file sau khi đóng trang.
+- Dùng **một tab truyền file cho mỗi máy chủ**. Các tab cùng origin dùng chung cookie và bản ghi resume; nếu hai tab cùng tiếp tục một upload, hủy ở tab này có thể xóa phần dở của tab kia. File nguồn vẫn an toàn; tab còn lại phải gửi lại khi gặp `404`. Bản alpha chưa điều phối quyền sở hữu upload giữa nhiều tab.
 - Trước khi gửi, trình duyệt đọc nguồn để tính SHA-256; từng chunk và file hoàn tất được đối chiếu tại host. Bước hash là một lượt đọc bổ sung, có thể chậm trên thiết bị yếu. Không giữ cả file trong RAM.
 - File hoàn tất xuất hiện trong danh sách chung; mọi thành viên đã đăng nhập có thể tải xuống. Thành viên chỉ xóa file do mình gửi; quản trị viên xóa được mọi file và thu hồi phiên thiết bị.
 - Chat chung giữ tối đa 200 tin trong RAM; mất khi khởi động lại host. Giữ trang mở khi truyền, nhất là trên điện thoại. PWA không đảm bảo truyền nền hay tiếp tục khi iOS khóa màn hình.

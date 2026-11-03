@@ -18,6 +18,7 @@
 - Logout unable to remove an HttpOnly cookie and SSE continuing past session expiry.
 - Concurrent metadata updates, interrupted-upload recovery and visibility before durable commit.
 - Browser worker stalls on file-list refresh failure and unbounded queue/chat growth.
+- Duplicate pending-upload ownership within a tab and repeated Cancel requests racing their final state. Distinct files with the same name/size/timestamp keep separate resume records.
 
 ### Scope
 
