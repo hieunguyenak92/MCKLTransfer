@@ -5,7 +5,8 @@ import fs from 'node:fs/promises';
 import vm from 'node:vm';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const appSource = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
+const appSource = await fs.readFile(new URL('../public/client.js', import.meta.url), 'utf8');
+const i18nSource = await fs.readFile(new URL('../public/i18n.js', import.meta.url), 'utf8');
 
 // These tests execute the shipped client and its real UI handlers. The DOM and
 // transport are deterministic adapters; browser/backend integration is separate.
@@ -28,23 +29,36 @@ class Element {
   append(...elements) { for (const element of elements) { element.parent = this; this.children.push(element); } }
   replaceChildren(...elements) { this.children = []; this.append(...elements); }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter(element => element !== this); }
+  getAttribute(name) { return this.attributes[name] ?? null; }
   setAttribute(name, value) { this.attributes[name] = value; }
   addEventListener(type, listener) { this.listeners[type] = listener; }
   closest() { return null; }
   click() { if (!this.disabled) this.onclick?.({ target: this, preventDefault() {} }); }
-  focus() {}
+  focus() { this.onFocus?.(); }
 }
 
 function fixtureServer() {
-  return { authenticated: true, clientId: 'fixture-client', uploads: new Map(), completed: new Map(), sequence: 0, active: 0, peak: 0, createCalls: 0, deleteCalls: 0, logoutCalls: 0, failRefresh: false, failLogout: false };
+  return { authenticated: true, clientId: 'fixture-client', uploads: new Map(), completed: new Map(), sequence: 0, active: 0, peak: 0, createCalls: 0, deleteCalls: 0, logoutCalls: 0, authCalls: 0, failRefresh: false, failLogout: false, failAuth: false, chunkFailure: null, chunkFailures: [] };
 }
 
 function createClient(server = fixtureServer(), storage = new Map()) {
   const elements = new Map(); const timers = new Set(); const sources = [];
   let disposed = false;
   const element = selector => {
-    if (!elements.has(selector)) elements.set(selector, new Element());
+    if (!elements.has(selector)) {
+      const node = new Element();
+      node.onFocus = () => { document.activeElement = node; };
+      elements.set(selector, node);
+    }
     return elements.get(selector);
+  };
+  const document = {
+    querySelector: element,
+    querySelectorAll(selector) {
+      const attribute = /^\[([^\]]+)\]$/.exec(selector)?.[1];
+      return [...elements.values()].filter(node => attribute && node.getAttribute(attribute) !== null);
+    },
+    createElement: () => new Element(), body: new Element(), documentElement: new Element(), activeElement: null,
   };
   element('#transferList').className = 'transfer-list empty-state';
   const schedule = (callback, ms, ...args) => {
@@ -58,8 +72,8 @@ function createClient(server = fixtureServer(), storage = new Map()) {
     console, performance, Blob, File, Response, Headers, AbortController, DOMException, Math, JSON, Promise, Map, Set, Array, Object, Number, String, Date, Error, Uint8Array, TextEncoder,
     setTimeout: schedule, clearTimeout: cancel,
     requestAnimationFrame: callback => schedule(callback, 0),
-    window: { isSecureContext: false, prompt() {}, addEventListener() {} }, navigator: {}, location: { origin: 'http://127.0.0.1:8787', protocol: 'http:' },
-    document: { querySelector: element, createElement: () => new Element(), body: new Element() },
+    window: { isSecureContext: false, prompt() {}, addEventListener() {} }, navigator: { languages: ['vi-VN'], language: 'vi-VN' }, location: { origin: 'http://127.0.0.1:8787', protocol: 'http:' },
+    document,
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }, confirm: () => true,
   };
   context.Worker = class {
@@ -84,7 +98,11 @@ function createClient(server = fixtureServer(), storage = new Map()) {
   context.fetch = async (url, options = {}) => {
     if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     if (url === '/api/config') return response({ version: 'fixture', maxFileSize: 100_000, chunkSize: 4, maxConcurrentUploads: 2, ...(server.authenticated ? { clientId: server.clientId, role: 'peer', permissions: { deleteOwn: true } } : {}) });
-    if (url === '/api/auth') { server.authenticated = true; server.clientId = `fixture-${++server.sequence}`; return response({ clientId: server.clientId }); }
+    if (url === '/api/auth') {
+      server.authCalls++;
+      if (server.failAuth) return response({ error: 'INVALID_CODE', message: 'That code is not correct.' }, 401);
+      server.authenticated = true; server.clientId = `fixture-${++server.sequence}`; return response({ clientId: server.clientId });
+    }
     if (url === '/api/logout') {
       server.logoutCalls++;
       if (server.failLogout) return response({ message: 'Fixture logout failure' }, 500);
@@ -135,6 +153,11 @@ function createClient(server = fixtureServer(), storage = new Map()) {
           this.done = true; server.active--;
           const bytes = Buffer.from(data);
           assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), this.headers['x-chunk-sha256']);
+          const chunkFailure = server.chunkFailures.shift() || server.chunkFailure;
+          if (chunkFailure) {
+            const { status, ...body } = chunkFailure;
+            this.status = status; this.responseText = JSON.stringify(body); this.onload(); return;
+          }
           this.partial.chunks.push(bytes); this.partial.offset += bytes.length;
           this.responseHeaders = { 'Upload-Offset': String(this.partial.offset) }; this.status = 204; this.onload();
         });
@@ -148,12 +171,14 @@ function createClient(server = fixtureServer(), storage = new Map()) {
     }
   };
   vm.createContext(context);
-  vm.runInContext(appSource, context, { filename: 'public/app.js' });
+  vm.runInContext(i18nSource, context, { filename: 'public/i18n.js' });
+  vm.runInContext(appSource, context, { filename: 'public/client.js' });
   const evaluate = expression => vm.runInContext(expression, context);
   return {
-    server, storage, element, sources, evaluate,
+    server, storage, element, sources, evaluate, document,
     transfers: () => evaluate('[...state.transfers.values()]'),
     selectFiles(files) { const input = element('#fileInput'); input.files = files; input.onchange({ target: input }); },
+    selectLanguage(language) { const select = element('#languageSelect'); select.value = language; select.onchange({ target: select }); },
     dispose() {
       evaluate('showAuth();');
       disposed = true;
@@ -313,4 +338,112 @@ test('client bounds live chat history received through the actual event handler'
   assert.equal(client.evaluate('state.messages.has("0")'), false);
   assert.equal(client.evaluate('state.messages.has("249")'), true);
   assert.equal(client.element('#chatMessages').children.length, 200);
+});
+
+test('switching the actual language selector preserves a live upload, session, SSE and input state', async t => {
+  const client = createClient(); t.after(() => client.dispose()); await ready(client);
+  const file = new File(['ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'], 'changing-language.txt', { lastModified: 400 });
+  client.selectFiles([file]);
+  await until(() => client.transfers()[0]?.offset >= 4 && client.server.active > 0, 'committed upload before switching language');
+  const item = client.transfers()[0];
+  const uploadId = item.uploadId;
+  const resumeRecord = client.storage.get('mckl_uploads_v1');
+  const clientId = client.evaluate('state.clientId');
+  const source = client.sources.at(-1);
+  const chat = client.element('#chatInput');
+  const deviceName = client.element('#deviceNameInput');
+  const code = client.element('#codeInput');
+  chat.value = 'Tin nhắn nháp / draft message'; chat.selectionStart = 4; chat.selectionEnd = 9; chat.focus();
+  deviceName.value = 'Điện thoại QA / 私の端末'; code.value = '123456';
+  client.element('#rememberDevice').checked = true;
+
+  client.selectLanguage('en');
+
+  assert.equal(client.document.documentElement.lang, 'en');
+  assert.equal(client.element('#languageSelect').value, 'en');
+  assert.equal(client.element('#connectionLabel').textContent, 'Connected');
+  assert.equal(client.storage.get('mckl_language_v1'), 'en');
+  assert.equal(client.transfers()[0], item);
+  assert.equal(item.uploadId, uploadId);
+  assert.equal(client.storage.get('mckl_uploads_v1'), resumeRecord);
+  assert.equal(client.evaluate('state.authenticated'), true);
+  assert.equal(client.evaluate('state.clientId'), clientId);
+  assert.equal(client.evaluate('state.eventSource'), source);
+  assert.equal(client.sources.length, 1);
+  assert.equal(source.closed, false);
+  assert.equal(client.document.activeElement, chat);
+  assert.equal(chat.value, 'Tin nhắn nháp / draft message');
+  assert.equal(chat.selectionStart, 4); assert.equal(chat.selectionEnd, 9);
+  assert.equal(deviceName.value, 'Điện thoại QA / 私の端末');
+  assert.equal(code.value, '123456');
+  assert.equal(client.element('#rememberDevice').checked, true);
+  assert.match(item.elements.meta.textContent, /^Sending /);
+  assert.equal(item.elements.bar.getAttribute('aria-label'), 'Progress for changing-language.txt');
+
+  source.emit('chat', { message: { id: 'after-language-switch', text: 'SSE still connected', senderId: 'other', sentAt: new Date().toISOString() } });
+  assert.equal(client.evaluate('state.messages.get("after-language-switch").text'), 'SSE still connected');
+  await until(() => item.phase === 'done' && !item.running, 'upload completes after language switch');
+  assert.equal(client.server.createCalls, 1, 'changing language does not create a new upload');
+  const completed = client.server.completed.get(uploadId);
+  assert.equal(Buffer.concat(completed.chunks).toString(), await file.text());
+  assert.equal(completed.sha256, crypto.createHash('sha256').update(Buffer.concat(completed.chunks)).digest('hex'));
+});
+
+test('invalid-code API errors re-render in the selected language while preserving status and retry inputs', async t => {
+  const server = fixtureServer(); server.authenticated = false; server.failAuth = true;
+  const client = createClient(server); t.after(() => client.dispose());
+  await until(() => client.evaluate('state.config !== null') && !client.evaluate('state.authenticated'), 'pairing screen');
+  client.element('#deviceNameInput').value = 'Máy thử nghiệm';
+  client.element('#codeInput').value = '000000';
+  client.element('#authForm').listeners.submit({ preventDefault() {} });
+  await until(() => server.authCalls === 1 && !client.element('#connectButton').disabled, 'rejected access code');
+  assert.equal(client.element('#authError').textContent, 'Mã truy cập không đúng.');
+  assert.equal(client.evaluate('state.authError.code'), 'INVALID_CODE');
+  assert.equal(client.evaluate('state.authError.status'), 401);
+  assert.equal(client.evaluate('state.authenticated'), false);
+
+  client.selectLanguage('en');
+  assert.equal(client.element('#authError').textContent, 'That access code is not correct.');
+  assert.equal(client.element('#deviceNameInput').value, 'Máy thử nghiệm');
+  assert.equal(client.element('#codeInput').value, '000000');
+  assert.equal(client.evaluate('state.authError.code'), 'INVALID_CODE');
+  assert.equal(client.evaluate('state.authError.status'), 401);
+
+  server.failAuth = false;
+  client.element('#authForm').listeners.submit({ preventDefault() {} });
+  await until(() => server.authCalls === 2 && client.evaluate('state.authenticated') && !client.element('#connectButton').disabled, 'pairing succeeds after retry');
+  assert.equal(client.element('#authError').textContent, '');
+  assert.equal(client.element('#codeInput').value, '');
+  assert.equal(client.element('#connectionLabel').textContent, 'Connected');
+});
+
+test('XHR checksum errors re-render after language switching and retry the same upload after an offset conflict', async t => {
+  const client = createClient(); t.after(() => client.dispose()); await ready(client);
+  client.server.chunkFailures.push({ status: 409, error: 'OFFSET_MISMATCH', message: 'The offset changed.' });
+  client.server.chunkFailure = { status: 422, error: 'CHECKSUM_MISMATCH', message: 'The chunk checksum does not match.' };
+  const file = new File(['ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'], 'checksum-kiểm-tra.txt', { lastModified: 500 });
+  client.selectFiles([file]);
+  await until(() => client.transfers()[0]?.phase === 'error' && !client.transfers()[0].running, 'checksum rejection after automatic offset recovery');
+  const item = client.transfers()[0];
+  const uploadId = item.uploadId;
+  await until(() => item.elements?.meta.textContent === 'Checksum không khớp. Hãy kiểm tra file và thử lại.', 'Vietnamese checksum message rendered');
+  assert.equal(item.error.code, 'CHECKSUM_MISMATCH');
+  assert.equal(item.error.status, 422);
+  assert.equal(client.server.chunkFailures.length, 0);
+  assert.ok(JSON.parse(client.storage.get('mckl_uploads_v1')).some(record => record.id === uploadId));
+
+  client.selectLanguage('en');
+  assert.equal(item.elements.meta.textContent, 'Checksum mismatch. Check the file and try again.');
+  assert.equal(item.elements.toggle.textContent, 'Retry');
+  assert.equal(item.error.code, 'CHECKSUM_MISMATCH');
+  assert.equal(item.error.status, 422);
+  assert.equal(item.uploadId, uploadId);
+
+  client.server.chunkFailure = null;
+  uploadButton(item, 'resume').click();
+  await until(() => item.phase === 'done' && !item.running, 'retry completes in English');
+  assert.equal(client.server.createCalls, 1, 'retry preserves the resumable upload session');
+  const completed = client.server.completed.get(uploadId);
+  assert.equal(Buffer.concat(completed.chunks).toString(), await file.text());
+  assert.equal(completed.sha256, crypto.createHash('sha256').update(Buffer.concat(completed.chunks)).digest('hex'));
 });

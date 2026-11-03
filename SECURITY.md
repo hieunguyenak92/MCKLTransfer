@@ -2,7 +2,7 @@
 
 ## Supported scope
 
-`0.2.0-alpha.1` is experimental. There is no stable security release or guaranteed response time. Use patched Node.js 24 (at least 24.22.2) or 26 (at least 26.13.0). See [validation evidence](docs/VALIDATION.md) and the [historical audit](docs/research/security-audit.md).
+`0.2.0-alpha.2` is experimental. There is no stable security release or guaranteed response time. Use patched Node.js 24 (at least 24.22.2) or 26 (at least 26.13.0). See [validation evidence](docs/VALIDATION.md) and the [historical audit](docs/research/security-audit.md).
 
 ## Trust boundary
 

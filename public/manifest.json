@@ -1,6 +1,8 @@
 {
   "name": "MCKL Transfer",
   "short_name": "MCKL Transfer",
+  "id": "/",
+  "lang": "vi",
   "description": "Chia sẻ file và trò chuyện qua máy chủ riêng của bạn",
   "start_url": "/",
   "scope": "/",

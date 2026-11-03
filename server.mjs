@@ -11,7 +11,7 @@ import { createSessions } from './lib/sessions.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const VERSION = '0.2.0-alpha.1';
+const VERSION = '0.2.0-alpha.2';
 const MAX_MESSAGES = 200;
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_SSE_BUFFER = 64 * 1024;

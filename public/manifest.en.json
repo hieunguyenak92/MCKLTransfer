@@ -1,0 +1,13 @@
+{
+  "name": "MCKL Transfer",
+  "short_name": "MCKL Transfer",
+  "id": "/",
+  "lang": "en",
+  "description": "Share files and chat through your own server",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#0c172b",
+  "icons": []
+}

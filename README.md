@@ -1,8 +1,10 @@
 # MCKL Transfer
 
+[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+
 Chia sẻ file và chat qua máy chủ riêng trong LAN, hoặc giữa các thiết bị được cho phép trong mạng overlay. Chỉ máy chủ cần Node.js; các thiết bị còn lại mở trình duyệt. Không có tài khoản cloud của MCKL, analytics, database hay dependency npm runtime.
 
-**0.2.0-alpha.1 · Apache-2.0 · thử nghiệm.** Xem [kết quả xác minh](docs/VALIDATION.md) và [mô hình bảo mật](SECURITY.md) trước khi triển khai. Chưa có cam kết hỗ trợ ổn định hoặc tốc độ LAN trên mọi thiết bị.
+**0.2.0-alpha.2 · Apache-2.0 · thử nghiệm.** Xem [kết quả xác minh](docs/VALIDATION.md) và [mô hình bảo mật](SECURITY.md) trước khi triển khai. Chưa có cam kết hỗ trợ ổn định hoặc tốc độ LAN trên mọi thiết bị.
 
 ## Chạy nhanh trong mạng tin cậy
 
@@ -26,6 +28,10 @@ Mặc định HTTP không mã hóa: chỉ dùng trên mạng bạn kiểm soát 
 - Chat chung giữ tối đa 200 tin trong RAM; mất khi khởi động lại host. Giữ trang mở khi truyền, nhất là trên điện thoại. PWA không đảm bảo truyền nền hay tiếp tục khi iOS khóa màn hình.
 
 Đây là mô hình **browser A → host lưu file → browser B tải về**. “Upload hoàn tất” nghĩa là host đã nhận và xác minh; không có nghĩa B đã tải/lưu file. Host đọc được cả file và chat; chưa có E2EE hoặc phòng riêng theo người nhận.
+
+## Ngôn ngữ
+
+Giao diện app có **Tiếng Việt** và **English**. Dùng bộ chọn ngôn ngữ trên thanh đầu trang; lựa chọn được lưu trên trình duyệt này. Lần đầu mở, app chọn theo ngôn ngữ trình duyệt và dùng English nếu không hỗ trợ. Đổi ngôn ngữ không tải lại trang hay dừng truyền file; nội dung file/chat/tên thiết bị không bị dịch. README có bảy ngôn ngữ qua các liên kết đầu trang.
 
 ## Cấu hình
 

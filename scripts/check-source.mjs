@@ -10,6 +10,7 @@ export const sourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.ur
 const ROOT_FILES = new Set([
   '.gitattributes', '.gitignore', 'LICENSE', 'NOTICE', 'package.json',
   'server.mjs', 'README.md', 'SECURITY.md', 'CONTRIBUTING.md',
+  'README.en.md', 'README.ja.md', 'README.es.md', 'README.pt.md', 'README.th.md', 'README.zh-CN.md',
   'CHANGELOG.md', 'PLAN.md', 'RESEARCH.md',
 ]);
 const ROOT_DIRECTORIES = new Set(['public', 'lib', 'test', 'scripts', 'docs', '.github']);

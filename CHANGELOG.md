@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0-alpha.2 — 2026-11-04
+
+### Added
+
+- Complete English, Japanese, Spanish, Portuguese, Thai and Simplified Chinese README translations, with a shared language navigation.
+- Vietnamese/English app selector, browser-language detection and a local saved preference. Switching updates UI, errors, accessible labels, dates and installation metadata without reloading or interrupting transfers.
+- Local translation catalogs and offline caching; no external translation service or new runtime dependency.
+
+### Fixed
+
+- Cached shells from an earlier version show a bilingual recovery message and manual reload control when they cannot safely load the current client.
+
 ## 0.2.0-alpha.1 — 2026-11-04
 
 ### Added
