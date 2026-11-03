@@ -1,0 +1,39 @@
+# Local transfers and their metadata must never be published.
+/shared/
+/release/
+.mckl-manifest.json
+.mckl-manifest.json.*.tmp
+.mckl-devices.json
+.mckl-devices.json.*.tmp
+.mckl-uploads.json
+.mckl-uploads.json.*.tmp
+.mckl-objects/
+*.part
+
+# Local configuration, credentials and certificates.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/
+.ssh/
+.codex/
+.agents/
+.npmrc
+
+# Dependencies, logs, archives and operating-system metadata.
+node_modules/
+*.log
+npm-debug.log*
+*.tgz
+*.zip
+*.tar
+*.gz
+*.bak
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,31 @@
+{
+  "name": "mckl-transfer",
+  "version": "0.2.0-alpha.1",
+  "description": "Lightweight, private LAN file sharing for Windows, macOS and iPhone browsers",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "hieunguyenak92",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hieunguyenak92/MCKLTransfer.git"
+  },
+  "private": true,
+  "files": [
+    "server.mjs",
+    "public/",
+    "lib/",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": "^24.22.2 || ^26.13.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test",
+    "check": "node scripts/check-source.mjs --syntax",
+    "release:check": "node scripts/check-source.mjs",
+    "release:source": "node scripts/release.mjs",
+    "benchmark": "node scripts/benchmark.mjs"
+  }
+}

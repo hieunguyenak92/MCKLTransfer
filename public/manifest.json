@@ -1,0 +1,11 @@
+{
+  "name": "MCKL Transfer",
+  "short_name": "MCKL Transfer",
+  "description": "Chia sẻ file và trò chuyện qua máy chủ riêng của bạn",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#0c172b",
+  "icons": []
+}

@@ -1,0 +1,28 @@
+* text=auto
+
+# Defense in depth for `git archive` if local files are accidentally tracked.
+# These attributes do not prevent a Git commit or a push; inspect the Git index.
+shared export-ignore
+.mckl-manifest.json export-ignore
+.mckl-manifest.json.*.tmp export-ignore
+.mckl-devices.json export-ignore
+.mckl-devices.json.*.tmp export-ignore
+.mckl-uploads.json export-ignore
+.mckl-uploads.json.*.tmp export-ignore
+.mckl-objects export-ignore
+release export-ignore
+*.part export-ignore
+.DS_Store export-ignore
+._* export-ignore
+.env export-ignore
+.env.* export-ignore
+.env.example -export-ignore
+*.pem export-ignore
+*.key export-ignore
+*.p12 export-ignore
+*.pfx export-ignore
+.npmrc export-ignore
+.aws export-ignore
+.ssh export-ignore
+.codex export-ignore
+.agents export-ignore

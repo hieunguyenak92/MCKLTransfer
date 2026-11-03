@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c172b">
+  <meta name="description" content="Chia sẻ file và trò chuyện qua máy chủ riêng của bạn">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/styles.css">
+  <title>MCKL Transfer</title>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">↗</span><div><strong>MCKL Transfer</strong><small>Chia sẻ file qua máy chủ riêng</small></div></div>
+      <div id="connectionState" class="state offline"><span aria-hidden="true"></span><span id="connectionLabel">Chưa kết nối</span></div>
+    </header>
+    <div id="transportNotice" class="transport-notice" role="note">Đang kiểm tra kết nối…</div>
+    <main>
+      <section id="accessPanel" class="card access-card">
+        <div class="eyebrow">BƯỚC 1 · GHÉP ĐÔI THIẾT BỊ</div>
+        <h1>Kết nối vào thư mục chia sẻ</h1>
+        <p class="muted">Nhập mã 6 số do chủ máy cung cấp. Nếu bạn quản lý máy chủ, dùng mã quản trị riêng hiển thị trong terminal.</p>
+        <form id="authForm" class="auth-form">
+          <label for="deviceNameInput">Tên thiết bị của bạn</label>
+          <input id="deviceNameInput" class="device-name-input" maxlength="80" autocomplete="off" placeholder="Ví dụ: Điện thoại của tôi" required>
+          <label for="codeInput">Mã truy cập hoặc mã quản trị</label>
+          <div class="auth-row"><input id="codeInput" type="password" autocomplete="current-password" maxlength="256" minlength="6" placeholder="Mã từ chủ máy" required><button id="connectButton" class="button primary" type="submit">Kết nối</button></div>
+          <label class="remember-row"><input id="rememberDevice" type="checkbox">Ghi nhớ thiết bị này trong 30 ngày</label>
+          <p class="muted auth-hint">Chỉ ghi nhớ trên thiết bị riêng. Đăng xuất hoặc thu hồi sẽ kết thúc phiên truy cập.</p>
+          <div id="authError" class="error" role="alert"></div>
+        </form>
+      </section>
+      <section id="appPanel" class="hidden">
+        <div class="hero-row"><div><div class="eyebrow">BƯỚC 2 · GỬI VÀ NHẬN</div><h1>Thả file để chia sẻ</h1><p class="muted">File được lưu trên máy chủ. Những người đã kết nối có thể tải file và đọc chat chung.</p><span id="roleLabel" class="role-label"></span></div><button id="disconnectButton" class="button ghost" type="button">Đăng xuất</button></div>
+        <div class="addresses app-addresses"><div class="label-row"><span>Địa chỉ để mở trên thiết bị khác</span><button id="shareButton" type="button" class="link-button">Chia sẻ địa chỉ</button></div><div id="addressList" class="address-list"></div></div>
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Chọn hoặc kéo thả file để chia sẻ"><input id="fileInput" type="file" multiple hidden><div class="drop-icon" aria-hidden="true">↑</div><h2>Kéo thả file vào đây</h2><p class="muted">hoặc <button id="pickButton" type="button" class="inline-button">chọn file từ thiết bị</button></p><small>Tối đa <span id="maxSize">20 GiB</span>/file · Giữ trang mở khi truyền</small></div>
+        <p class="resume-hint muted">Mất mạng hoặc tải lại trang? Chọn lại đúng file để tiếp tục phần máy chủ đã nhận. File hết hạn sẽ được gửi lại từ đầu.</p>
+        <section class="transfer-section"><div class="section-heading"><div class="heading-with-count"><h2>Hàng đợi truyền file</h2><span id="transferCount" class="count-badge">0</span></div><button id="pauseAllButton" type="button" class="link-button">Tạm dừng tất cả</button></div><div id="transferList" class="transfer-list empty-state">Chưa có file đang truyền.</div></section>
+        <section class="chat-section">
+          <div class="section-heading"><div><h2>Trò chuyện</h2><p class="muted chat-subtitle">200 tin nhắn gần nhất trong phiên máy chủ; mọi thiết bị đã kết nối đều đọc được.</p></div><span class="count-badge">Nhóm chung</span></div>
+          <div id="chatMessages" class="chat-messages" aria-live="polite"><div class="empty-state">Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.</div></div>
+          <form id="chatForm" class="chat-form"><textarea id="chatInput" rows="1" maxlength="4000" placeholder="Viết tin nhắn… (Enter để gửi, Shift+Enter xuống dòng)" aria-label="Tin nhắn"></textarea><button id="chatSendButton" class="button primary" type="submit">Gửi</button></form>
+        </section>
+        <section class="transfer-section"><div class="section-heading"><h2>File trong thư mục chia sẻ</h2><button id="refreshButton" type="button" class="link-button">Làm mới</button></div><div id="fileList" class="file-list empty-state">Chưa có file.</div></section>
+        <section id="devicePanel" class="transfer-section hidden"><div class="section-heading"><div><h2>Thiết bị được ghép đôi</h2><p class="muted chat-subtitle">Thu hồi để ngắt phiên và yêu cầu ghép đôi lại.</p></div><button id="refreshDevicesButton" type="button" class="link-button">Làm mới</button></div><div id="deviceList" class="file-list empty-state">Chưa có thiết bị.</div></section>
+      </section>
+    </main>
+    <footer><span>Máy chủ do bạn quản lý · Không có tài khoản cloud của MCKL</span><span id="deviceLabel"></span></footer>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
