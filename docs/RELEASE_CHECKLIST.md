@@ -134,4 +134,4 @@ Lệnh cuối phải không có output. Kiểm tra riêng mọi tên/path mới;
 
 Private vulnerability reporting chỉ khả dụng cho public repository; khả năng bảo vệ repo private phụ thuộc gói tài khoản. [GitHub: private reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository), [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
 
-Checklist này không ghi nhận đã tạo repository, commit, push, chạy CI GitHub, đổi visibility hoặc phát hành. Trạng thái thực tế phải được ghi riêng trong VALIDATION theo bằng chứng cuối.
+Đây là mẫu quy trình dùng lại; các ô chưa đánh dấu không phải bảng trạng thái của bản alpha hiện tại. Trạng thái và giới hạn thực tế được ghi trong [VALIDATION](VALIDATION.md), còn tag/artifact cuối được xác định tại [trang phát hành](https://github.com/hieunguyenak92/MCKLTransfer/releases/tag/v0.2.0-alpha.1). Không đánh dấu các trường hợp thiết bị chi tiết chỉ dựa trên một báo cáo smoke test tổng quát.

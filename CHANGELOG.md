@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0-alpha.1 — Unreleased
+## 0.2.0-alpha.1 — 2026-11-04
 
 ### Added
 
@@ -22,7 +22,7 @@
 
 ### Scope
 
-Host-mediated shared file/chat alpha. No E2EE, per-recipient rooms, native discovery, guaranteed mobile background transfer or remote desktop. Tests, benchmarks and remaining release gates: [docs/VALIDATION.md](docs/VALIDATION.md).
+Host-mediated shared file/chat alpha. No E2EE, per-recipient rooms, native discovery, guaranteed mobile background transfer or remote desktop. Tests, benchmarks and verification limits: [docs/VALIDATION.md](docs/VALIDATION.md).
 
 ## 0.1.0
 

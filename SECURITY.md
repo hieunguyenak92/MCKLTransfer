@@ -18,8 +18,6 @@
 
 ## Reporting a vulnerability
 
-Maintainer: **hieunguyenak92**. Repository security settings are still pending final publication verification. Until a private reporting channel is confirmed here, do not post credentials, personal files or sensitive exploit details in public issues.
+Maintainer: **hieunguyenak92**. GitHub Private vulnerability reporting is enabled and was verified on **2026-11-04**. Report security issues through the [private vulnerability reporting form](https://github.com/hieunguyenak92/MCKLTransfer/security/advisories/new), which requires a GitHub account. Do not post credentials, personal files or sensitive exploit details in public issues.
 
-After the maintainer enables GitHub Private vulnerability reporting, use the repository's **Security → Report a vulnerability** form. Use synthetic data; include affected version, OS/runtime/browser, reproduction steps and impact. Never attach someone else's files, access codes, raw session tokens or private keys.
-
-This policy must be updated with the verified reporting URL before the release announcement.
+Use synthetic data; include affected version, OS/runtime/browser, reproduction steps and impact. Never attach someone else's files, access codes, raw session tokens or private keys.
