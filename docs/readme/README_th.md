@@ -1,10 +1,14 @@
+<div align="center">
+
+[English](../../README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md) · [Tiếng Việt](README_vi.md) · **ไทย** · [Español](README_es.md) · [Português](README_pt.md)
+
 # MCKL Transfer
 
-[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+</div>
 
 แชร์ไฟล์และแชตผ่านเซิร์ฟเวอร์ส่วนตัวใน LAN หรือระหว่างอุปกรณ์ที่ได้รับอนุญาตในเครือข่าย overlay มีเพียงเซิร์ฟเวอร์ที่ต้องใช้ Node.js ส่วนอุปกรณ์อื่นเปิดผ่านเบราว์เซอร์ ไม่มีบัญชีคลาวด์ของ MCKL, analytics, ฐานข้อมูล หรือ dependency ของ npm ที่จำเป็นขณะรัน
 
-**0.2.0-alpha.2 · Apache-2.0 · รุ่นทดลอง** อ่าน[ผลการตรวจสอบ](docs/VALIDATION.md)และ[โมเดลความปลอดภัย](SECURITY.md)ก่อนใช้งาน ยังไม่มีการรับประกันการสนับสนุนแบบเสถียรหรือความเร็ว LAN บนอุปกรณ์ทุกชนิด
+**0.2.0-alpha.2 · Apache-2.0 · รุ่นทดลอง** อ่าน[ผลการตรวจสอบ](../VALIDATION.md)และ[โมเดลความปลอดภัย](../../SECURITY.md)ก่อนใช้งาน ยังไม่มีการรับประกันการสนับสนุนแบบเสถียรหรือความเร็ว LAN บนอุปกรณ์ทุกชนิด
 
 ## เริ่มต้นในเครือข่ายที่เชื่อถือได้
 
@@ -129,12 +133,12 @@ npm run release:source
 
 ตัวส่งออกซอร์สรับเฉพาะรายการที่อนุญาต ตรวจ archive ซ้ำ และเขียน SHA-256 ใน `release/` อย่า ZIP โฟลเดอร์ที่ใช้งานอยู่ทั้งหมด `.gitignore` ไม่ตัดไฟล์ออกจาก ZIP ของ Finder และไม่ลบข้อมูลที่ commit แล้ว คง `private: true` เพื่อป้องกันการ publish npm โดยไม่ตั้งใจ ซอร์สยังอยู่ภายใต้ Apache-2.0
 
-- [การมีส่วนร่วม](CONTRIBUTING.md), [ความปลอดภัย](SECURITY.md), [เช็กลิสต์การเผยแพร่](docs/RELEASE_CHECKLIST.md)
-- [โปรโตคอล alpha](docs/PROTOCOL.md), [หลักฐานและข้อจำกัดของการตรวจสอบ](docs/VALIDATION.md)
-- [สถาปัตยกรรม](docs/research/architecture.md), [ประสิทธิภาพ](docs/research/performance.md), [ใบอนุญาตและแผนงาน](docs/research/license-and-roadmap.md)
+- [การมีส่วนร่วม](../../CONTRIBUTING.md), [ความปลอดภัย](../../SECURITY.md), [เช็กลิสต์การเผยแพร่](../RELEASE_CHECKLIST.md)
+- [โปรโตคอล alpha](../PROTOCOL.md), [หลักฐานและข้อจำกัดของการตรวจสอบ](../VALIDATION.md)
+- [สถาปัตยกรรม](../research/architecture.md), [ประสิทธิภาพ](../research/performance.md), [ใบอนุญาตและแผนงาน](../research/license-and-roadmap.md)
 
 Discovery/QR, WebRTC, clipboard ที่ส่งเมื่อผู้ใช้สั่ง, การส่งโฟลเดอร์ และการแชร์หน้าจออยู่ในแผนงาน Remote desktop แบบเต็มต้องมี native agent และโมเดลการยินยอมแยกต่างหาก รุ่นนี้ยังไม่มี remote control
 
 ## ใบอนุญาต
 
-[Apache License 2.0](LICENSE) Copyright 2026 hieunguyenak92 ดู [NOTICE](NOTICE) อนุญาตให้ใช้ แก้ไข และแจกจ่ายตามเงื่อนไขใบอนุญาต รวมถึงการใช้งานเชิงพาณิชย์ ต้องเก็บ LICENSE/NOTICE และระบุการเปลี่ยนแปลงตามเงื่อนไขที่เกี่ยวข้อง ไม่มีการรับประกัน
+[Apache License 2.0](../../LICENSE) Copyright 2026 hieunguyenak92 ดู [NOTICE](../../NOTICE) อนุญาตให้ใช้ แก้ไข และแจกจ่ายตามเงื่อนไขใบอนุญาต รวมถึงการใช้งานเชิงพาณิชย์ ต้องเก็บ LICENSE/NOTICE และระบุการเปลี่ยนแปลงตามเงื่อนไขที่เกี่ยวข้อง ไม่มีการรับประกัน

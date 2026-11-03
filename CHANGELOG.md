@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Place the English README at the repository root and translations in `docs/readme/`, with centered language links above each title and the current language highlighted.
+
 ## 0.2.0-alpha.2 — 2026-11-04
 
 ### Added

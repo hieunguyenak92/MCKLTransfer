@@ -1,10 +1,14 @@
+<div align="center">
+
+[English](../../README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md) · [Tiếng Việt](README_vi.md) · [ไทย](README_th.md) · **Español** · [Português](README_pt.md)
+
 # MCKL Transfer
 
-[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+</div>
 
 Comparte archivos y chatea a través de tu propio servidor en una LAN o entre dispositivos autorizados en una red superpuesta (overlay). Solo el servidor necesita Node.js; los demás dispositivos usan un navegador. No hay cuentas de nube de MCKL, analítica, base de datos ni dependencias npm de ejecución.
 
-**0.2.0-alpha.2 · Apache-2.0 · experimental.** Consulta los [resultados de verificación](docs/VALIDATION.md) y el [modelo de seguridad](SECURITY.md) antes de desplegarlo. No se garantiza soporte estable ni una velocidad LAN determinada en todos los dispositivos.
+**0.2.0-alpha.2 · Apache-2.0 · experimental.** Consulta los [resultados de verificación](../VALIDATION.md) y el [modelo de seguridad](../../SECURITY.md) antes de desplegarlo. No se garantiza soporte estable ni una velocidad LAN determinada en todos los dispositivos.
 
 ## Inicio rápido en una red de confianza
 
@@ -129,12 +133,12 @@ npm run release:source
 
 El exportador de código fuente usa una lista explícita de archivos permitidos, vuelve a comprobar el archivo comprimido y escribe SHA-256 en `release/`. No comprimas todo el directorio de trabajo. `.gitignore` no excluye archivos de los ZIP de Finder ni elimina datos ya confirmados en Git. Mantén `private: true` para impedir una publicación accidental en npm; el código fuente sigue bajo Apache-2.0.
 
-- [Contribuir](CONTRIBUTING.md), [seguridad](SECURITY.md), [lista de publicación](docs/RELEASE_CHECKLIST.md).
-- [Protocolo alfa](docs/PROTOCOL.md), [pruebas y límites de verificación](docs/VALIDATION.md).
-- [Arquitectura](docs/research/architecture.md), [rendimiento](docs/research/performance.md), [licencia y hoja de ruta](docs/research/license-and-roadmap.md).
+- [Contribuir](../../CONTRIBUTING.md), [seguridad](../../SECURITY.md), [lista de publicación](../RELEASE_CHECKLIST.md).
+- [Protocolo alfa](../PROTOCOL.md), [pruebas y límites de verificación](../VALIDATION.md).
+- [Arquitectura](../research/architecture.md), [rendimiento](../research/performance.md), [licencia y hoja de ruta](../research/license-and-roadmap.md).
 
 El descubrimiento/QR, WebRTC, el intercambio del portapapeles iniciado por el usuario, la transferencia de carpetas y compartir pantalla forman parte de la hoja de ruta. Un escritorio remoto completo requiere un agente nativo y un modelo de consentimiento independiente; esta versión no incluye control remoto.
 
 ## Licencia
 
-[Apache License 2.0](LICENSE). Copyright 2026 hieunguyenak92; consulta [NOTICE](NOTICE). Se permiten el uso, la modificación y la distribución, incluido el uso comercial, según los términos de la licencia. Conserva LICENSE/NOTICE y documenta los cambios según los términos aplicables. No se ofrece garantía.
+[Apache License 2.0](../../LICENSE). Copyright 2026 hieunguyenak92; consulta [NOTICE](../../NOTICE). Se permiten el uso, la modificación y la distribución, incluido el uso comercial, según los términos de la licencia. Conserva LICENSE/NOTICE y documenta los cambios según los términos aplicables. No se ofrece garantía.

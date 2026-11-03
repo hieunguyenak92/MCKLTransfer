@@ -1,63 +1,67 @@
+<div align="center">
+
+**English** · [简体中文](docs/readme/README_zh-CN.md) · [日本語](docs/readme/README_ja.md) · [Tiếng Việt](docs/readme/README_vi.md) · [ไทย](docs/readme/README_th.md) · [Español](docs/readme/README_es.md) · [Português](docs/readme/README_pt.md)
+
 # MCKL Transfer
 
-[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+</div>
 
-Chia sẻ file và chat qua máy chủ riêng trong LAN, hoặc giữa các thiết bị được cho phép trong mạng overlay. Chỉ máy chủ cần Node.js; các thiết bị còn lại mở trình duyệt. Không có tài khoản cloud của MCKL, analytics, database hay dependency npm runtime.
+Share files and chat through your own server on a LAN, or between authorized devices on an overlay network. Only the server needs Node.js; other devices use a browser. There are no MCKL cloud accounts, analytics, database or npm runtime dependencies.
 
-**0.2.0-alpha.2 · Apache-2.0 · thử nghiệm.** Xem [kết quả xác minh](docs/VALIDATION.md) và [mô hình bảo mật](SECURITY.md) trước khi triển khai. Chưa có cam kết hỗ trợ ổn định hoặc tốc độ LAN trên mọi thiết bị.
+**0.2.0-alpha.2 · Apache-2.0 · experimental.** Read the [validation results](docs/VALIDATION.md) and [security model](SECURITY.md) before deployment. Stable support and LAN speeds across all devices are not guaranteed.
 
-## Chạy nhanh trong mạng tin cậy
+## Quick start on a trusted network
 
-Cài Node.js **24 từ 24.22.2**, hoặc **26 từ 26.13.0**, đã cập nhật bản vá. Trong thư mục source:
+Install a patched Node.js **24, starting at 24.22.2**, or **26, starting at 26.13.0**. From the source directory:
 
 ```sh
 npm start
 ```
 
-Không cần `npm install`. Terminal hiển thị địa chỉ LAN, mã truy cập 6 số và **mã quản trị riêng**. Mở địa chỉ LAN trên thiết bị khác, đặt tên thiết bị và nhập mã truy cập. Chỉ cung cấp mã quản trị cho người quản lý máy chủ. Các mã không xuất hiện qua API, kể cả localhost.
+No `npm install` is needed. The terminal displays LAN addresses, a six-digit access code and a **separate administrator code**. Open the LAN address on another device, enter a device name and the access code. Give the administrator code only to the person managing the server. Codes are never exposed through the API, including on localhost.
 
-Mặc định HTTP không mã hóa: chỉ dùng trên mạng bạn kiểm soát với những người tin cậy. Dùng HTTPS hoặc overlay được kiểm soát cho kết nối khác. Không chuyển tiếp cổng này từ router ra Internet.
+The default HTTP connection is unencrypted: use it only on a network you control with trusted participants. Use HTTPS or a controlled overlay for other connections. Do not forward this port from your router to the Internet.
 
-### Cách sử dụng
+### Using the app
 
-- Chọn/kéo nhiều file; hàng đợi toàn ứng dụng truyền tối đa hai file cùng lúc, có tốc độ, ETA, tạm dừng, tiếp tục, thử lại và hủy.
-- Sau mất mạng hoặc tải lại trang, chọn lại đúng file để tiếp tục. Cần giữ cookie của thiết bị và upload chưa hết hạn. Trình duyệt không tự giữ quyền đọc file sau khi đóng trang.
-- Dùng **một tab truyền file cho mỗi máy chủ**. Các tab cùng origin dùng chung cookie và bản ghi resume; nếu hai tab cùng tiếp tục một upload, hủy ở tab này có thể xóa phần dở của tab kia. File nguồn vẫn an toàn; tab còn lại phải gửi lại khi gặp `404`. Bản alpha chưa điều phối quyền sở hữu upload giữa nhiều tab.
-- Trước khi gửi, trình duyệt đọc nguồn để tính SHA-256; từng chunk và file hoàn tất được đối chiếu tại host. Bước hash là một lượt đọc bổ sung, có thể chậm trên thiết bị yếu. Không giữ cả file trong RAM.
-- File hoàn tất xuất hiện trong danh sách chung; mọi thành viên đã đăng nhập có thể tải xuống. Thành viên chỉ xóa file do mình gửi; quản trị viên xóa được mọi file và thu hồi phiên thiết bị.
-- Chat chung giữ tối đa 200 tin trong RAM; mất khi khởi động lại host. Giữ trang mở khi truyền, nhất là trên điện thoại. PWA không đảm bảo truyền nền hay tiếp tục khi iOS khóa màn hình.
+- Select or drag multiple files. The application-wide queue transfers up to two files at once, with speed, ETA, pause, resume, retry and cancel controls.
+- After losing connectivity or reloading the page, select the same file again to resume. The device cookie must remain available and the upload must not have expired. The browser does not retain permission to read a file automatically after the page closes.
+- Use **one upload tab per server**. Tabs on the same origin share cookies and resume records. If two tabs resume the same upload, cancelling in one can delete the other tab's partial progress. The source file remains safe; the other tab must restart when it receives `404`. This alpha does not coordinate upload ownership between tabs.
+- Before sending, the browser reads the source to calculate SHA-256; each chunk and the completed file are checked on the host. Hashing requires an additional read and may be slow on less powerful devices. The entire file is not held in RAM.
+- Completed files appear in the shared list; all signed-in members can download them. Members can delete only files they uploaded. Administrators can delete any file and revoke device sessions.
+- Shared chat keeps up to 200 messages in RAM; they are lost when the host restarts. Keep the page open during transfers, especially on phones. The PWA does not guarantee background transfers or continued transfers while iOS locks the screen.
 
-Đây là mô hình **browser A → host lưu file → browser B tải về**. “Upload hoàn tất” nghĩa là host đã nhận và xác minh; không có nghĩa B đã tải/lưu file. Host đọc được cả file và chat; chưa có E2EE hoặc phòng riêng theo người nhận.
+The model is **browser A → host stores the file → browser B downloads it**. “Upload complete” means the host has received and verified the file; it does not mean B has downloaded or saved it. The host can read both files and chat; there is no E2EE or recipient-specific private room.
 
-## Ngôn ngữ
+## Language
 
-Giao diện app có **Tiếng Việt** và **English**. Dùng bộ chọn ngôn ngữ trên thanh đầu trang; lựa chọn được lưu trên trình duyệt này. Lần đầu mở, app chọn theo ngôn ngữ trình duyệt và dùng English nếu không hỗ trợ. Đổi ngôn ngữ không tải lại trang hay dừng truyền file; nội dung file/chat/tên thiết bị không bị dịch. README có bảy ngôn ngữ qua các liên kết đầu trang.
+The app interface is available in **Tiếng Việt** and **English**. Use the language selector in the top bar; your choice is saved in this browser. On first use, the app follows the browser language and falls back to English when it is unsupported. Switching languages does not reload the page or stop transfers; file contents, chat messages and device names are not translated. The README is available in seven languages through the links at the top of the page.
 
-## Cấu hình
+## Configuration
 
-Ứng dụng đọc biến môi trường của tiến trình; không tự nạp `.env`. Dung lượng tính bằng byte, thời gian bằng millisecond.
+The app reads the process environment; it does not load `.env` files automatically. Sizes are in bytes and durations in milliseconds.
 
-| Biến | Mặc định | Ý nghĩa |
+| Variable | Default | Meaning |
 |---|---|---|
-| `HOST`, `PORT` | `0.0.0.0`, `8787` | Interface và cổng lắng nghe; mặc định IPv4 |
-| `SHARE_DIR` | `./shared` cạnh source | Thư mục dữ liệu riêng, nên đặt ngoài repository |
-| `DEVICE_NAME` | hostname | Tên host, chỉ hiện sau đăng nhập và trong terminal |
-| `SHARE_CODE` | 6 số ngẫu nhiên mỗi lần chạy | Mã thành viên; `LAN_SHARE_CODE` vẫn được nhận để tương thích |
-| `ADMIN_CODE` | Ngẫu nhiên riêng mỗi lần chạy | Tối thiểu 24 ký tự; giữ bí mật |
-| `MAX_FILE_SIZE` | `21474836480` (20 GiB) | Giới hạn mỗi file |
-| `MAX_TOTAL_SIZE` | `107374182400` (100 GiB) | Tổng file hoàn tất và dung lượng upload đã đặt trước |
-| `MIN_FREE_SPACE` | `134217728` (128 MiB) | Dung lượng ổ trống dự phòng; không phải disk quota của OS |
-| `CHUNK_SIZE` | `4194304` (4 MiB) | Tối đa 16 MiB mỗi request upload chunk |
-| `MAX_CONCURRENT_UPLOADS` | `4` | Số tác vụ ghi/hash upload đồng thời ở server |
-| `MAX_PENDING_UPLOADS` | `128` | Số upload dở được giữ |
-| `UPLOAD_TTL_MS` | `86400000` (24 giờ) | Hạn tuyệt đối từ lúc tạo upload dở |
-| `SESSION_TTL_MS`, `MAX_DEVICES` | `43200000` (12 giờ), `128` | Phiên thường và tổng phiên thiết bị; ghi nhớ có hạn 30 ngày |
-| `REQUEST_TIMEOUT_MS` | `1800000` (30 phút) | Thời gian nhận một request; socket không hoạt động 60 giây bị ngắt |
-| `TLS_KEY_FILE`, `TLS_CERT_FILE` | Không đặt | Cặp private key/chứng chỉ PEM cho HTTPS trực tiếp |
-| `PUBLIC_URL` | Không đặt | Origin ngoài của proxy, ví dụ `https://transfer.example.org`; không path/query |
-| `ALLOWED_HOSTS` | Hostname/interface cục bộ | Thêm hostname/IP cụ thể, phân cách dấu phẩy; không wildcard hay port |
+| `HOST`, `PORT` | `0.0.0.0`, `8787` | Listening interface and port; IPv4 by default |
+| `SHARE_DIR` | `./shared` beside the source | Private data directory; preferably outside the repository |
+| `DEVICE_NAME` | hostname | Host name, displayed only after sign-in and in the terminal |
+| `SHARE_CODE` | Six random digits on each start | Member code; `LAN_SHARE_CODE` is still accepted for compatibility |
+| `ADMIN_CODE` | Separate random value on each start | At least 24 characters; keep it secret |
+| `MAX_FILE_SIZE` | `21474836480` (20 GiB) | Per-file limit |
+| `MAX_TOTAL_SIZE` | `107374182400` (100 GiB) | Completed files plus reserved upload capacity |
+| `MIN_FREE_SPACE` | `134217728` (128 MiB) | Reserved free disk space; not an OS disk quota |
+| `CHUNK_SIZE` | `4194304` (4 MiB) | Maximum 16 MiB per upload-chunk request |
+| `MAX_CONCURRENT_UPLOADS` | `4` | Concurrent server-side upload write/hash operations |
+| `MAX_PENDING_UPLOADS` | `128` | Number of retained incomplete uploads |
+| `UPLOAD_TTL_MS` | `86400000` (24 hours) | Absolute lifetime from the creation of an incomplete upload |
+| `SESSION_TTL_MS`, `MAX_DEVICES` | `43200000` (12 hours), `128` | Normal session lifetime and total device sessions; remembered sessions last up to 30 days |
+| `REQUEST_TIMEOUT_MS` | `1800000` (30 minutes) | Time allowed to receive one request; sockets idle for 60 seconds are disconnected |
+| `TLS_KEY_FILE`, `TLS_CERT_FILE` | Unset | PEM private-key/certificate pair for direct HTTPS |
+| `PUBLIC_URL` | Unset | External proxy origin, such as `https://transfer.example.org`; no path or query |
+| `ALLOWED_HOSTS` | Local hostname/interfaces | Additional specific hostnames/IPs, comma-separated; no wildcards or ports |
 
-Ví dụ PowerShell, dùng thư mục dữ liệu riêng:
+PowerShell example using a separate data directory:
 
 ```powershell
 $env:SHARE_DIR = "D:\MCKL-data"
@@ -65,60 +69,60 @@ $env:DEVICE_NAME = "Home transfer host"
 npm start
 ```
 
-Mã đổi sau restart không thu hồi phiên đã cấp. Dùng bảng quản lý thiết bị để revoke; nếu lộ PIN, đổi PIN **và** thu hồi những phiên không tin cậy. Cookie và quyền sở hữu file được giữ qua restart. Đăng xuất/xóa cookie rồi ghép đôi lại tạo danh tính mới; quản trị viên vẫn xóa được file cũ.
+Changing codes after a restart does not revoke existing sessions. Use the device-management panel to revoke them. If a PIN leaks, change the PIN **and** revoke untrusted sessions. Cookies and file ownership survive restarts. Signing out or deleting cookies and pairing again creates a new identity; administrators can still delete the old files.
 
-## HTTPS và kết nối khác mạng
+## HTTPS and connections across networks
 
-### HTTPS trực tiếp
+### Direct HTTPS
 
-Cấp chứng chỉ có SAN khớp đúng hostname/IP đang dùng, từ CA mà mọi thiết bị tin cậy. Đặt key ngoài source, hạn chế quyền đọc, rồi cấu hình cả hai biến:
+Obtain a certificate whose SAN matches the hostname/IP in use, from a CA trusted by every device. Keep the key outside the source, restrict read permissions, then configure both variables:
 
 ```sh
 TLS_KEY_FILE=/secure/mckl/server.key TLS_CERT_FILE=/secure/mckl/server.pem npm start
 ```
 
-Mở URL `https://...` tương ứng. Không bỏ qua lỗi xác minh chứng chỉ. Chứng chỉ tự ký cần quy trình cài trust CA/fingerprint qua kênh tin cậy; app chưa tự động pairing chứng chỉ. Cookie HTTPS có `Secure`, `HttpOnly`, `SameSite=Strict`.
+Open the corresponding `https://...` URL. Do not bypass certificate-verification errors. Self-signed certificates require a trusted-channel process for installing CA trust or verifying fingerprints; the app does not automate certificate pairing. HTTPS cookies use `Secure`, `HttpOnly` and `SameSite=Strict`.
 
-### Nhóm riêng qua Tailscale hoặc WireGuard
+### Private groups through Tailscale or WireGuard
 
-Cài overlay trên các thiết bị, cấp quyền đúng thành viên và giới hạn cổng dịch vụ. Giữ xác thực của MCKL. Với WireGuard, bạn tự quản lý khóa, routing, firewall và DNS; với Tailscale, kiểm tra policy và đường direct/relay. Dải IP riêng không tự chứng minh thiết bị đáng tin cậy.
+Install the overlay on the devices, authorize the intended members and restrict the service port. Keep MCKL authentication enabled. With WireGuard, you manage keys, routing, firewall and DNS yourself; with Tailscale, check policies and direct/relay paths. A private IP range alone does not establish that a device is trustworthy.
 
-Một lựa chọn HTTPS cho tailnet là [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve). Sau khi có tên DNS của host và đã cấu hình HTTPS trong tailnet, chạy MCKL chỉ trên loopback với origin đó:
+One HTTPS option for a tailnet is [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve). Once the host has a DNS name and HTTPS is configured in the tailnet, run MCKL on loopback only with that origin:
 
 ```sh
 HOST=127.0.0.1 PUBLIC_URL=https://YOUR-HOST.YOUR-TAILNET.ts.net npm start
 ```
 
-Trong terminal khác:
+In another terminal:
 
 ```sh
 tailscale serve --bg http://127.0.0.1:8787
 tailscale serve status
 ```
 
-Mở đúng HTTPS URL Serve cấp. Dịch vụ này dành cho tailnet; giới hạn access policy của bạn. Xem [CLI Serve](https://tailscale.com/docs/reference/tailscale-cli/serve) cho điều kiện và cách tắt. MCKL không tự cài hoặc cấu hình Tailscale, và chưa được kiểm thử trên tailnet thật trong đợt phát hành này.
+Open the exact HTTPS URL supplied by Serve. This service is for the tailnet; restrict your access policy. See the [Serve CLI](https://tailscale.com/docs/reference/tailscale-cli/serve) for requirements and shutdown instructions. MCKL does not install or configure Tailscale automatically, and this release has not been tested on a real tailnet.
 
-Reverse proxy khác cần chuyển tiếp stream/SSE không buffer, giữ Host hoặc đặt `PUBLIC_URL` đúng, cấu hình timeout/body size phù hợp, giới hạn upstream vào proxy tin cậy. App không tin `X-Forwarded-*` để xác định an toàn kết nối.
+Other reverse proxies must forward streaming/SSE without buffering, preserve Host or set `PUBLIC_URL` correctly, configure suitable timeouts/body limits, and restrict upstream access to the trusted proxy. The app does not trust `X-Forwarded-*` to determine whether a connection is secure.
 
-## Dữ liệu, nâng cấp và sao lưu
+## Data, upgrades and backups
 
-Host giữ `.mckl-manifest.json`, `.mckl-devices.json` (hash token phiên), `.mckl-uploads.json` và `.mckl-objects/` trong `SHARE_DIR`. Payload mới lưu theo ID; tên hiển thị nằm trong manifest. Không chỉnh sửa/xóa file nội bộ khi server chạy. Không chạy hai tiến trình trên cùng `SHARE_DIR`.
+The host keeps `.mckl-manifest.json`, `.mckl-devices.json` (session-token hashes), `.mckl-uploads.json` and `.mckl-objects/` in `SHARE_DIR`. New payloads are stored by ID; display names are in the manifest. Do not edit or delete internal files while the server is running. Do not run two processes against the same `SHARE_DIR`.
 
-Dừng host trước khi sao lưu **toàn bộ** thư mục dữ liệu. Backup chứa file và quyền truy cập của nhóm, cần được bảo vệ. Bản alpha đọc manifest MVP cũ với regular file hợp lệ; không tự chuyển payload cũ sang object storage. File cũ không có owner chỉ quản trị viên xóa được. Sao lưu trước nâng cấp; downgrade không được hỗ trợ sau khi định dạng manifest mới được ghi.
+Stop the host before backing up the **entire** data directory. Backups contain group files and access state and must be protected. This alpha reads legacy MVP manifests containing valid regular files; it does not automatically migrate old payloads to object storage. Only administrators can delete legacy files without an owner. Back up before upgrading; downgrades are unsupported once the new manifest format has been written.
 
-Chỉ dùng filesystem cục bộ đáng tin cậy với ACL chặt. Upload dở hết hạn được dọn; file hoàn tất không tự xóa. Chưa kiểm chứng network drive, đồng bộ cloud thư mục dữ liệu, mất điện thực hoặc storage phần cứng. Atomic rename/fsync không phải cam kết chống mọi hỏng hóc.
+Use only a trusted local filesystem with strict ACLs. Expired incomplete uploads are cleaned up; completed files are not deleted automatically. Network drives, cloud synchronization of the data directory, actual power loss and storage hardware have not been verified. Atomic rename/fsync does not guarantee protection against every failure.
 
-## Nếu thiết bị khác không kết nối được
+## If another device cannot connect
 
-Chọn URL IPv4 LAN in trong terminal; cùng Wi-Fi và tránh guest/AP isolation. Kiểm tra firewall chỉ mở cổng cho mạng/thiết bị cần dùng. Kiểm tra health trên máy khác, thay địa chỉ mẫu:
+Choose the LAN IPv4 URL printed in the terminal, use the same Wi-Fi and avoid guest/AP isolation. Check that the firewall opens the port only for the intended networks/devices. Check health from another machine, replacing the example address:
 
 ```sh
 curl --connect-timeout 5 http://192.168.1.10:8787/api/health
 ```
 
-Đúng là `{"ok":true}`. Timeout thường cần kiểm tra routing/firewall; `403` cần kiểm tra hostname/Origin và `ALLOWED_HOSTS`/`PUBLIC_URL`. Không thêm wildcard để sửa lỗi. Trình duyệt có thể hỏi quyền truy cập mạng cục bộ.
+The expected response is `{"ok":true}`. A timeout usually requires checking routing/firewall; `403` requires checking hostname/Origin and `ALLOWED_HOSTS`/`PUBLIC_URL`. Do not add a wildcard to work around the error. The browser may request permission to access the local network.
 
-## Phát triển, kiểm thử và phát hành
+## Development, testing and releases
 
 ```sh
 npm run check
@@ -127,14 +131,14 @@ npm run release:check
 npm run release:source
 ```
 
-Source exporter chỉ lấy danh sách cho phép, kiểm tra lại archive và ghi SHA-256 vào `release/`. Không zip toàn bộ thư mục đang dùng. `.gitignore` không loại file khỏi ZIP của Finder và không gỡ dữ liệu đã commit. Giữ `private: true` để tránh publish npm nhầm; source vẫn được cấp phép Apache-2.0.
+The source exporter uses an explicit allowlist, checks the archive again and writes SHA-256 to `release/`. Do not zip the entire working directory. `.gitignore` does not exclude files from Finder ZIPs or remove committed data. Keep `private: true` to prevent accidental npm publication; the source remains licensed under Apache-2.0.
 
-- [Đóng góp](CONTRIBUTING.md), [bảo mật](SECURITY.md), [checklist phát hành](docs/RELEASE_CHECKLIST.md).
-- [Giao thức alpha](docs/PROTOCOL.md), [bằng chứng và giới hạn xác minh](docs/VALIDATION.md).
-- [Kiến trúc](docs/research/architecture.md), [hiệu năng](docs/research/performance.md), [giấy phép và roadmap](docs/research/license-and-roadmap.md).
+- [Contributing](CONTRIBUTING.md), [security](SECURITY.md), [release checklist](docs/RELEASE_CHECKLIST.md).
+- [Alpha protocol](docs/PROTOCOL.md), [validation evidence and limits](docs/VALIDATION.md).
+- [Architecture](docs/research/architecture.md), [performance](docs/research/performance.md), [license and roadmap](docs/research/license-and-roadmap.md).
 
-Discovery/QR, WebRTC, clipboard theo thao tác, folder transfer và screen sharing là roadmap. Full remote desktop cần native agent và mô hình consent riêng; bản này chưa có remote control.
+Discovery/QR, WebRTC, user-initiated clipboard sharing, folder transfer and screen sharing are on the roadmap. Full remote desktop requires a native agent and a separate consent model; this version has no remote control.
 
-## Giấy phép
+## License
 
-[Apache License 2.0](LICENSE). Copyright 2026 hieunguyenak92; xem [NOTICE](NOTICE). Cho phép sử dụng, sửa đổi và phân phối theo điều khoản giấy phép, gồm sử dụng thương mại. Giữ LICENSE/NOTICE và ghi nhận thay đổi theo điều khoản áp dụng. Không có bảo hành.
+[Apache License 2.0](LICENSE). Copyright 2026 hieunguyenak92; see [NOTICE](NOTICE). Use, modification and distribution, including commercial use, are permitted under the license terms. Retain LICENSE/NOTICE and document changes as required by the applicable terms. No warranty is provided.

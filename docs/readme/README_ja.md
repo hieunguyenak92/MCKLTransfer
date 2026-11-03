@@ -1,10 +1,14 @@
+<div align="center">
+
+[English](../../README.md) · [简体中文](README_zh-CN.md) · **日本語** · [Tiếng Việt](README_vi.md) · [ไทย](README_th.md) · [Español](README_es.md) · [Português](README_pt.md)
+
 # MCKL Transfer
 
-[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+</div>
 
 LAN 内の自分のサーバー、またはアクセスを許可したオーバーレイネットワーク内の端末間で、ファイルとチャットを共有します。Node.js が必要なのはサーバーだけです。他の端末はブラウザーで接続します。MCKL のクラウドアカウント、アクセス解析、データベース、実行時の npm 依存関係はありません。
 
-**0.2.0-alpha.2 · Apache-2.0 · 実験版。** 導入前に[検証結果](docs/VALIDATION.md)と[セキュリティモデル](SECURITY.md)を確認してください。安定したサポートや、すべての端末での LAN 転送速度は保証しません。
+**0.2.0-alpha.2 · Apache-2.0 · 実験版。** 導入前に[検証結果](../VALIDATION.md)と[セキュリティモデル](../../SECURITY.md)を確認してください。安定したサポートや、すべての端末での LAN 転送速度は保証しません。
 
 ## 信頼できるネットワークですぐに使う
 
@@ -129,12 +133,12 @@ npm run release:source
 
 ソースエクスポーターは許可リストのファイルだけを取り込み、アーカイブを再検証し、SHA-256 を `release/` に出力します。使用中のディレクトリ全体を ZIP にしないでください。`.gitignore` は Finder の ZIP からファイルを除外せず、コミット済みデータも削除しません。誤って npm に公開しないよう `private: true` を維持してください。ソースのライセンスは引き続き Apache-2.0 です。
 
-- [貢献](CONTRIBUTING.md)、[セキュリティ](SECURITY.md)、[リリースチェックリスト](docs/RELEASE_CHECKLIST.md)。
-- [アルファ版プロトコル](docs/PROTOCOL.md)、[検証の証拠と限界](docs/VALIDATION.md)。
-- [アーキテクチャ](docs/research/architecture.md)、[性能](docs/research/performance.md)、[ライセンスとロードマップ](docs/research/license-and-roadmap.md)。
+- [貢献](../../CONTRIBUTING.md)、[セキュリティ](../../SECURITY.md)、[リリースチェックリスト](../RELEASE_CHECKLIST.md)。
+- [アルファ版プロトコル](../PROTOCOL.md)、[検証の証拠と限界](../VALIDATION.md)。
+- [アーキテクチャ](../research/architecture.md)、[性能](../research/performance.md)、[ライセンスとロードマップ](../research/license-and-roadmap.md)。
 
 Discovery/QR、WebRTC、ユーザー操作によるクリップボード共有、フォルダー転送、画面共有はロードマップ上の項目です。完全なリモートデスクトップにはネイティブエージェントと専用の同意モデルが必要です。このバージョンにリモート操作機能はありません。
 
 ## ライセンス
 
-[Apache License 2.0](LICENSE)。Copyright 2026 hieunguyenak92。[NOTICE](NOTICE) を参照してください。商用利用を含め、ライセンス条件に従って使用、変更、配布できます。LICENSE/NOTICE を保持し、適用される条件に従って変更を明記してください。無保証です。
+[Apache License 2.0](../../LICENSE)。Copyright 2026 hieunguyenak92。[NOTICE](../../NOTICE) を参照してください。商用利用を含め、ライセンス条件に従って使用、変更、配布できます。LICENSE/NOTICE を保持し、適用される条件に従って変更を明記してください。無保証です。

@@ -1,10 +1,14 @@
+<div align="center">
+
+[English](../../README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md) · [Tiếng Việt](README_vi.md) · [ไทย](README_th.md) · [Español](README_es.md) · **Português**
+
 # MCKL Transfer
 
-[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+</div>
 
 Partilhe ficheiros e converse através do seu próprio servidor numa LAN ou entre dispositivos autorizados numa rede sobreposta (overlay). Apenas o servidor precisa de Node.js; os outros dispositivos usam um navegador. Não há contas na nuvem da MCKL, análise de utilização, base de dados nem dependências npm em tempo de execução.
 
-**0.2.0-alpha.2 · Apache-2.0 · experimental.** Consulte os [resultados de verificação](docs/VALIDATION.md) e o [modelo de segurança](SECURITY.md) antes de implementar. Não há garantia de suporte estável nem de velocidade LAN em todos os dispositivos.
+**0.2.0-alpha.2 · Apache-2.0 · experimental.** Consulte os [resultados de verificação](../VALIDATION.md) e o [modelo de segurança](../../SECURITY.md) antes de implementar. Não há garantia de suporte estável nem de velocidade LAN em todos os dispositivos.
 
 ## Início rápido numa rede de confiança
 
@@ -129,12 +133,12 @@ npm run release:source
 
 O exportador de código-fonte usa uma lista explícita de ficheiros permitidos, volta a verificar o arquivo e grava SHA-256 em `release/`. Não comprima todo o diretório de trabalho. `.gitignore` não exclui ficheiros dos ZIP do Finder nem remove dados já incluídos em commits. Mantenha `private: true` para evitar a publicação acidental no npm; o código-fonte continua licenciado sob Apache-2.0.
 
-- [Contribuir](CONTRIBUTING.md), [segurança](SECURITY.md), [lista de publicação](docs/RELEASE_CHECKLIST.md).
-- [Protocolo alfa](docs/PROTOCOL.md), [evidências e limites de verificação](docs/VALIDATION.md).
-- [Arquitetura](docs/research/architecture.md), [desempenho](docs/research/performance.md), [licença e roteiro](docs/research/license-and-roadmap.md).
+- [Contribuir](../../CONTRIBUTING.md), [segurança](../../SECURITY.md), [lista de publicação](../RELEASE_CHECKLIST.md).
+- [Protocolo alfa](../PROTOCOL.md), [evidências e limites de verificação](../VALIDATION.md).
+- [Arquitetura](../research/architecture.md), [desempenho](../research/performance.md), [licença e roteiro](../research/license-and-roadmap.md).
 
 Descoberta/QR, WebRTC, partilha da área de transferência iniciada pelo utilizador, transferência de pastas e partilha de ecrã fazem parte do roteiro. Um ambiente de trabalho remoto completo exige um agente nativo e um modelo de consentimento separado; esta versão não tem controlo remoto.
 
 ## Licença
 
-[Apache License 2.0](LICENSE). Copyright 2026 hieunguyenak92; consulte [NOTICE](NOTICE). A utilização, modificação e distribuição, incluindo uso comercial, são permitidas nos termos da licença. Mantenha LICENSE/NOTICE e documente as alterações conforme os termos aplicáveis. Não é prestada qualquer garantia.
+[Apache License 2.0](../../LICENSE). Copyright 2026 hieunguyenak92; consulte [NOTICE](../../NOTICE). A utilização, modificação e distribuição, incluindo uso comercial, são permitidas nos termos da licença. Mantenha LICENSE/NOTICE e documente as alterações conforme os termos aplicáveis. Não é prestada qualquer garantia.

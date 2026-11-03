@@ -1,10 +1,14 @@
+<div align="center">
+
+[English](../../README.md) · **简体中文** · [日本語](README_ja.md) · [Tiếng Việt](README_vi.md) · [ไทย](README_th.md) · [Español](README_es.md) · [Português](README_pt.md)
+
 # MCKL Transfer
 
-[Tiếng Việt](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português](README.pt.md) · [ไทย](README.th.md) · [简体中文](README.zh-CN.md)
+</div>
 
 通过局域网内的自有服务器共享文件和聊天，也可供受控 overlay 网络中已获授权的设备使用。只有服务器需要 Node.js，其他设备使用浏览器访问。没有 MCKL 云账户、分析追踪、数据库或运行时 npm 依赖。
 
-**0.2.0-alpha.2 · Apache-2.0 · 实验版本。** 部署前请阅读[验证结果](docs/VALIDATION.md)和[安全模型](SECURITY.md)。尚不承诺稳定支持或所有设备上的局域网传输速度。
+**0.2.0-alpha.2 · Apache-2.0 · 实验版本。** 部署前请阅读[验证结果](../VALIDATION.md)和[安全模型](../../SECURITY.md)。尚不承诺稳定支持或所有设备上的局域网传输速度。
 
 ## 在可信网络中快速开始
 
@@ -129,12 +133,12 @@ npm run release:source
 
 源码导出工具仅包含允许列表中的文件，重新检查 archive，并将 SHA-256 写入 `release/`。不要将正在使用的整个目录打包为 ZIP。`.gitignore` 不会从 Finder ZIP 中排除文件，也不会移除已提交的数据。保留 `private: true` 以防误发布到 npm；源码仍按 Apache-2.0 授权。
 
-- [贡献](CONTRIBUTING.md)、[安全](SECURITY.md)、[发布检查清单](docs/RELEASE_CHECKLIST.md)。
-- [alpha 协议](docs/PROTOCOL.md)、[验证证据与局限](docs/VALIDATION.md)。
-- [架构](docs/research/architecture.md)、[性能](docs/research/performance.md)、[许可证与路线图](docs/research/license-and-roadmap.md)。
+- [贡献](../../CONTRIBUTING.md)、[安全](../../SECURITY.md)、[发布检查清单](../RELEASE_CHECKLIST.md)。
+- [alpha 协议](../PROTOCOL.md)、[验证证据与局限](../VALIDATION.md)。
+- [架构](../research/architecture.md)、[性能](../research/performance.md)、[许可证与路线图](../research/license-and-roadmap.md)。
 
 Discovery/QR、WebRTC、用户主动操作的剪贴板共享、文件夹传输和屏幕共享属于路线图。完整远程桌面需要原生 agent 和独立的同意机制；本版本没有远程控制功能。
 
 ## 许可证
 
-[Apache License 2.0](LICENSE)。Copyright 2026 hieunguyenak92；参见 [NOTICE](NOTICE)。允许依照许可证条款使用、修改和分发，包括商业使用。请保留 LICENSE/NOTICE，并根据适用条款注明更改。不提供担保。
+[Apache License 2.0](../../LICENSE)。Copyright 2026 hieunguyenak92；参见 [NOTICE](../../NOTICE)。允许依照许可证条款使用、修改和分发，包括商业使用。请保留 LICENSE/NOTICE，并根据适用条款注明更改。不提供担保。
