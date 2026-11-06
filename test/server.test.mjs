@@ -18,7 +18,7 @@ test('LAN transfer lifecycle', async (t) => {
   const config = await fetch(`${base}/api/config`).then((r) => r.json());
   assert.equal(config.code, undefined, 'the access code must never be exposed by HTTP, including loopback');
   assert.equal(config.deviceName, undefined);
-  assert.equal(config.version, '0.2.0-alpha.2');
+  assert.equal(config.version, '0.5.0');
   const bad = await fetch(`${base}/api/auth`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: '000000' }) });
   assert.equal(bad.status, 401);
   const auth = await fetch(`${base}/api/auth`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: '123456' }) });

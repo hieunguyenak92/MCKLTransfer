@@ -8,10 +8,13 @@ import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createFileStore } from './lib/file-store.mjs';
 import { createSessions } from './lib/sessions.mjs';
+import { createSharing } from './lib/sharing.mjs';
+import { createDirectBroker } from './lib/direct.mjs';
+import { streamArchive } from './lib/archive.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const VERSION = '0.2.0-alpha.2';
+const VERSION = '0.5.0';
 const MAX_MESSAGES = 200;
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_SSE_BUFFER = 64 * 1024;
@@ -107,6 +110,11 @@ function createApp(options = {}) {
   if (chunkSize > 16 * 1024 ** 2) throw new Error('CHUNK_SIZE must not exceed 16 MiB.');
   const maxConcurrentUploads = numberOption(options.maxConcurrentUploads ?? process.env.MAX_CONCURRENT_UPLOADS, 4, 1);
   const sessionTtlMs = numberOption(options.sessionTtlMs ?? process.env.SESSION_TTL_MS, 12 * 60 * 60 * 1000, 1);
+  const requireApproval = options.requireApproval ?? process.env.REQUIRE_APPROVAL === '1';
+  const maxDownloads = numberOption(options.maxDownloads ?? process.env.MAX_DOWNLOADS, 16, 1);
+  const maxOwnerDownloads = numberOption(options.maxOwnerDownloads ?? process.env.MAX_OWNER_DOWNLOADS, 4, 1);
+  const iceServers = options.iceServers ?? JSON.parse(process.env.ICE_SERVERS || '[]');
+  if (!Array.isArray(iceServers) || iceServers.length > 8 || iceServers.some(item => !item || ![item.urls].flat().every(url => typeof url === 'string' && /^(stun|stuns|turn|turns):[^\s]+$/.test(url)) || JSON.stringify(item).length > 4096)) throw new Error('Invalid ICE_SERVERS configuration.');
   const maxDevices = numberOption(options.maxDevices ?? process.env.MAX_DEVICES, 128, 1);
   const tlsKeyFile = options.tlsKeyFile ?? process.env.TLS_KEY_FILE;
   const tlsCertFile = options.tlsCertFile ?? process.env.TLS_CERT_FILE;
@@ -115,7 +123,7 @@ function createApp(options = {}) {
   const canonicalUrl = publicUrl ? new URL(publicUrl) : null;
   if (canonicalUrl && (!['http:', 'https:'].includes(canonicalUrl.protocol) || canonicalUrl.username || canonicalUrl.password || canonicalUrl.pathname !== '/' || canonicalUrl.search || canonicalUrl.hash)) throw new Error('PUBLIC_URL must be an HTTP(S) origin.');
   const protocol = tlsKeyFile ? 'https:' : 'http:';
-  const allowedHosts = new Set(['localhost', '127.0.0.1', '[::1]', os.hostname().toLowerCase(), ...networkAddresses(port).map(entry => entry.address.includes(':') ? `[${entry.address}]` : entry.address)]);
+  const allowedHosts = new Set(['localhost', '127.0.0.1', '[::1]', os.hostname().toLowerCase()]);
   if (host !== '0.0.0.0' && host !== '::') allowedHosts.add(host.includes(':') ? `[${host}]` : host.toLowerCase());
   if (canonicalUrl) allowedHosts.add(canonicalUrl.hostname.toLowerCase());
   const extraHosts = options.allowedHosts ?? process.env.ALLOWED_HOSTS?.split(',') ?? [];
@@ -128,31 +136,44 @@ function createApp(options = {}) {
   const sseClients = new Map();
   const attempts = new Map();
   const chatAttempts = new Map();
+  const mutationAttempts = new Map();
+  const activeRequests = new Map();
+  const downloads = new Map();
+  let activeDownloads = 0;
   const messages = [];
   let server;
   let sweepTimer;
   let stopping = false;
 
-  function closeEvents(tokenHash) {
+  function closeEvents(tokenHash, device) {
+    if (device?.id) direct.revoke(device.id);
     for (const [res, client] of sseClients) if (client.tokenHash === tokenHash) res.end();
+    for (const active of activeRequests.get(tokenHash) || []) active.controller.abort();
   }
 
-  const sessions = createSessions({ shareDir, shareCode, adminCode, sessionTtlMs, maxDevices, now, onRevoke: closeEvents });
+  const sessions = createSessions({ shareDir, shareCode, adminCode, sessionTtlMs, maxDevices, requireApproval, now, onRevoke: closeEvents });
+  const sharing = createSharing({ shareDir, now, getDevice: id => sessions.getById(id) });
+  const direct = createDirectBroker({ now, maxFileSize, onChange: resource => broadcast({ type: 'direct' }, { ...resource, roomId:'inbox' }) });
   const store = createFileStore({
     shareDir, maxFileSize, maxTotalSize, maxConcurrentUploads, chunkSize, now,
+    maxFiles: numberOption(options.maxFiles ?? process.env.MAX_FILES, 10000, 1),
+    maxOwnerFiles: numberOption(options.maxOwnerFiles ?? process.env.MAX_OWNER_FILES, 1000, 1),
+    maxOwnerBytes: numberOption(options.maxOwnerBytes ?? process.env.MAX_OWNER_BYTES, 20 * 1024 ** 3),
+    maxOwnerPendingUploads: numberOption(options.maxOwnerPendingUploads ?? process.env.MAX_OWNER_PENDING_UPLOADS, 16, 1),
     uploadTtlMs: numberOption(options.uploadTtlMs ?? process.env.UPLOAD_TTL_MS, 24 * 60 * 60 * 1000, 1),
     maxPendingUploads: numberOption(options.maxPendingUploads ?? process.env.MAX_PENDING_UPLOADS, 128, 1),
     minFreeSpace: numberOption(options.minFreeSpace ?? process.env.MIN_FREE_SPACE, 128 * 1024 ** 2),
   });
 
   function publicFile(file, session) {
-    const { id, name, size, mime, hash, uploadedAt, ownerId } = file;
-    return { id, name, size, mime, hash, uploadedAt, ownerId, canDelete: session.role === 'admin' || ownerId === session.clientId };
+    const { id, name, size, mime, hash, uploadedAt, ownerId, roomId, recipientId, relativePath, expiresAt } = file;
+    return { id, name, size, mime, hash, uploadedAt, ownerId, roomId, recipientId, relativePath, expiresAt, canDelete: session.role === 'admin' || ownerId === session.clientId };
   }
 
-  function broadcast(event) {
+  function broadcast(event, resource = null) {
     const body = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
     for (const [res, client] of sseClients) {
+      if (resource && !sharing.canRead(resource, client.session)) continue;
       if (client.expires <= now()) { res.end(); continue; }
       if (res.destroyed || res.writableLength > MAX_SSE_BUFFER) { res.destroy(); continue; }
       try { if (!res.write(body)) res.destroy(); } catch { res.destroy(); }
@@ -173,7 +194,7 @@ function createApp(options = {}) {
     if (typeof req.headers.host !== 'string') throw error(400, 'HOST_REQUIRED', 'Host is required.');
     let address;
     try { address = new URL(`${req.socket.encrypted ? 'https:' : 'http:'}//${req.headers.host}`); } catch { throw error(400, 'INVALID_HOST', 'Invalid Host.'); }
-    if (address.username || address.password || address.pathname !== '/' || address.search || address.hash || !allowedHosts.has(address.hostname.toLowerCase())) throw error(403, 'HOST_NOT_ALLOWED', 'Host is not allowed.');
+    if (address.username || address.password || address.pathname !== '/' || address.search || address.hash || !allowedHosts.has(address.hostname.toLowerCase()) && !networkAddresses(port).some(item => (item.address.includes(':') ? `[${item.address}]` : item.address).toLowerCase() === address.hostname.toLowerCase())) throw error(403, 'HOST_NOT_ALLOWED', 'Host is not allowed.');
     if (req.headers.origin) {
       let origin;
       try { origin = new URL(req.headers.origin).origin; } catch { throw error(403, 'ORIGIN_NOT_ALLOWED', 'Origin is not allowed.'); }
@@ -198,7 +219,7 @@ function createApp(options = {}) {
     if (sseClients.size >= 128 || [...sseClients.values()].filter(client => client.tokenHash === session.tokenHash).length >= 4) throw error(429, 'EVENT_LIMIT_REACHED', 'Too many event connections.');
     res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.write('event: ready\ndata: {"type":"ready"}\n\n');
-    const client = { tokenHash: session.tokenHash, expires: session.expires };
+    const client = { tokenHash: session.tokenHash, expires: session.expires, session };
     sseClients.set(res, client);
     let expiry;
     function expire() {
@@ -215,10 +236,40 @@ function createApp(options = {}) {
     res.once('close', () => { clearTimeout(expiry); clearInterval(heartbeat); sseClients.delete(res); });
   }
 
-  async function download(req, res, id) {
+  function readableFile(id, session) {
+    const file = store.files.get(id);
+    if (!file || !sharing.canRead(file, session) || file.expiresAt && file.expiresAt <= now()) throw error(404, 'NOT_FOUND', 'File not found.');
+    return file;
+  }
+  function trackRequest(req, res, session, isDownload = false) {
+    if (isDownload && (activeDownloads >= maxDownloads || (downloads.get(session.clientId) || 0) >= maxOwnerDownloads)) throw error(429, 'DOWNLOAD_LIMIT_REACHED', 'Too many active downloads.');
+    const controller = new AbortController(); const set = activeRequests.get(session.tokenHash) || new Set();
+    const entry = { controller }; set.add(entry); activeRequests.set(session.tokenHash, set);
+    if (isDownload) { activeDownloads++; downloads.set(session.clientId, (downloads.get(session.clientId) || 0) + 1); }
+    let cleaned = false;
+    const expiry = setTimeout(() => controller.abort(), Math.min(2_147_483_647, Math.max(1, session.expires - now()))); expiry.unref();
+    const abort = () => { req.destroy(); res.destroy(); };
+    controller.signal.addEventListener('abort', abort, { once: true });
+    function cleanup() {
+      if (cleaned) return; cleaned = true; clearTimeout(expiry); set.delete(entry);
+      if (!set.size) activeRequests.delete(session.tokenHash);
+      if (isDownload) { activeDownloads--; const n = downloads.get(session.clientId) - 1; if(n) downloads.set(session.clientId,n); else downloads.delete(session.clientId); }
+      controller.signal.removeEventListener('abort', abort);
+      controller.abort();
+    }
+    res.once('close', cleanup); res.once('finish', cleanup);
+    return { signal: controller.signal, cleanup, authorize(resource) { const current = sessions.get(req); if (!current || current.approved === false || current.clientId !== session.clientId) throw error(401, 'AUTH_REQUIRED', 'Session ended.'); controller.signal.throwIfAborted(); if (resource) sharing.validateTarget(resource, current); return true; } };
+  }
+  async function recordFile(file) { try { await sharing.record({ ...file, fileId: file.id, type: 'uploaded', transport: 'hub' }); } catch { log.warn('Transfer committed; history storage is unavailable.'); } }
+
+  async function download(req, res, id, session) {
+    readableFile(id, session);
+    const active = trackRequest(req, res, session, true);
+    active.signal.throwIfAborted();
     const { handle, stat, file } = await store.open(id);
     let transferred = false;
     try {
+      active.authorize();
       const etag = `"${file.hash}"`;
       if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-store' }); res.end(); return; }
       let range;
@@ -239,11 +290,12 @@ function createApp(options = {}) {
       res.once('close', () => stream.destroy());
       transferred = true;
       stream.pipe(res);
-    } finally { if (!transferred) await handle.close(); }
+    } finally { if (!transferred) { await handle.close(); active.cleanup(); } }
   }
 
   async function handle(req, res) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; style-src 'self'; script-src 'self'; worker-src 'self'; connect-src 'self'; img-src 'self' data:");
@@ -256,17 +308,19 @@ function createApp(options = {}) {
     if (pathname === '/api/health' && req.method === 'GET') return sendJson(res, 200, { ok: true });
     if (pathname === '/api/config' && req.method === 'GET') {
       const session = sessions.get(req);
-      const payload = { version: VERSION, maxFileSize, chunkSize, maxConcurrentUploads, secure: Boolean(req.socket.encrypted || canonicalUrl?.protocol === 'https:') };
-      if (session) Object.assign(payload, {
-        deviceName, addresses: networkAddresses(server.address().port, protocol), clientId: session.clientId, role: session.role,
-        permissions: { deleteOwn: true, deleteAll: session.role === 'admin', manageDevices: session.role === 'admin' }, storage: store.usage(),
+      const payload = { version: VERSION, maxFileSize, chunkSize, maxConcurrentUploads, requireApproval, protocolVersion: 2, features: { sharing: true, leases: true, direct: true }, secure: Boolean(req.socket.encrypted || canonicalUrl?.protocol === 'https:') };
+      if (session) Object.assign(payload, { clientId: session.clientId, approved: session.approved, status: session.status });
+      if (session?.approved !== false && session) Object.assign(payload, {
+        deviceName, addresses: canonicalUrl ? [{ url: canonicalUrl.origin }] : networkAddresses(server.address().port, protocol), clientId: session.clientId, role: session.role, approved: session.approved, status: session.status, iceServers: session.approved !== false ? iceServers : [],
+        permissions: { deleteOwn: true, deleteAll: session.role === 'admin', manageDevices: session.role === 'admin' }, storage: session.role === 'admin' ? store.usage() : undefined,
       });
       return sendJson(res, 200, payload);
     }
     if (pathname === '/api/auth' && req.method === 'POST') {
       const address = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
       if (!rateLimit(attempts, address, 12) || !rateLimit(attempts, '*global*', 120)) return sendJson(res, 429, { error: 'RATE_LIMITED', message: 'Too many attempts. Try again in a minute.' }, { 'Retry-After': '60' });
-      const auth = await sessions.authenticate(await readJson(req), req);
+      const body = await readJson(req);
+      const auth = body.invite ? await sharing.redeemInvite(body.invite, () => sessions.authenticateInvite(body, req)) : await sessions.authenticate(body, req);
       const { token, ...payload } = auth;
       return sendJson(res, 200, { ok: true, ...payload }, { 'Set-Cookie': cookie(req, encodeURIComponent(token), auth.expiresIn) });
     }
@@ -277,6 +331,8 @@ function createApp(options = {}) {
         finally { res.setHeader('Set-Cookie', cookie(req, '', 0)); }
         return sendJson(res, 200, { ok: true });
       }
+      if (session.approved === false) throw error(403, 'APPROVAL_REQUIRED', 'The host must approve this device.');
+      if (!['GET', 'HEAD'].includes(req.method) && !rateLimit(mutationAttempts, session.clientId, req.method === 'PATCH' ? 12000 : 600)) throw error(429, 'RATE_LIMITED', 'Too many requests.');
       if (pathname === '/api/devices' && req.method === 'GET') {
         if (session.role !== 'admin') throw error(403, 'FORBIDDEN', 'Host administrator access is required.');
         return sendJson(res, 200, { devices: sessions.list() });
@@ -285,20 +341,77 @@ function createApp(options = {}) {
       if (deviceAction && req.method === 'DELETE') {
         if (session.role !== 'admin') throw error(403, 'FORBIDDEN', 'Host administrator access is required.');
         await sessions.revokeDevice(deviceAction[1]);
+        direct.revoke(deviceAction[1]);
         return sendJson(res, 200, { ok: true });
       }
-      if (pathname === '/api/files' && req.method === 'GET') return sendJson(res, 200, { files: store.list().map(file => publicFile(file, session)) });
-      if (pathname === '/api/messages' && req.method === 'GET') return sendJson(res, 200, { messages, clientId: session.clientId });
+      if (deviceAction && req.method === 'POST') {
+        if (session.role !== 'admin') throw error(403, 'FORBIDDEN', 'Host administrator access is required.');
+        await sessions.approveDevice(deviceAction[1]); return sendJson(res, 200, { ok: true });
+      }
+      if (pathname === '/api/metrics' && req.method === 'GET') { if(session.role !== 'admin') throw error(403,'FORBIDDEN','Host administrator access is required.'); return sendJson(res,200,{storage:store.usage(),activeDownloads,eventConnections:sseClients.size,sessions:sessions.list().length,sessionHealth:sessions.health(),sharingHealth:sharing.health(),directTransfers:direct.list(session).length}); }
+      const inviteAction = /^\/api\/invites\/([a-f0-9]{24})$/.exec(pathname);
+      if(inviteAction && req.method==='DELETE') { if(session.role!=='admin') throw error(403,'FORBIDDEN','Host administrator access is required.'); sharing.revokeInvite(inviteAction[1]); return sendJson(res,200,{ok:true}); }
+      if (pathname === '/api/peers' && req.method === 'GET') return sendJson(res, 200, { peers: sessions.listPublic().map(({id,name}) => ({id,name})) });
+      if (pathname === '/api/invites') {
+        if (session.role !== 'admin') throw error(403, 'FORBIDDEN', 'Host administrator access is required.');
+        if (req.method === 'GET') return sendJson(res, 200, { invites: sharing.listInvites() });
+        if (req.method === 'POST') return sendJson(res, 201, sharing.createInvite(await readJson(req)));
+      }
+      if (pathname === '/api/rooms') {
+        if (req.method === 'GET') return sendJson(res, 200, { rooms: sharing.listRooms(session) });
+        if (req.method === 'POST') { const room = await sharing.createRoom(await readJson(req), session); broadcast({type:'scope'}); return sendJson(res, 201, room); }
+      }
+      const roomAction = /^\/api\/rooms\/([a-f0-9]{24})$/.exec(pathname);
+      if (roomAction && req.method === 'PATCH') {
+        let room;
+        try { room = await sharing.updateRoom(roomAction[1], await readJson(req), session); } catch(failure) { if(sharing.health().degraded) for(const [key,entries] of activeRequests) if(key!==session.tokenHash) for(const active of entries) active.controller.abort(); throw failure; }
+        // Scope changes invalidate active transfers and snapshots, including streams already open.
+        for (const [tokenHash, entries] of activeRequests) if (tokenHash !== session.tokenHash) for (const active of entries) active.controller.abort();
+        broadcast({type:'scope'}); return sendJson(res, 200, room);
+      }
+      if (pathname === '/api/history' && req.method === 'GET') return sendJson(res, 200, { history: sharing.history(session, { limit: 100 }) });
+      const receipt = /^\/api\/files\/([a-f0-9]{24})\/receipt$/.exec(pathname);
+      if (receipt && req.method === 'POST') { const file = readableFile(receipt[1],session); const body = await readJson(req); return sendJson(res, 200, await sharing.receipt(file, session, body.status)); }
+      if (pathname === '/api/batch' && req.method === 'GET') {
+        const ids = [...new Set((url.searchParams.get('ids') || '').split(','))];
+        if (!ids.length || ids.length > 100 || ids.some(id => !/^[a-f0-9]{24}$/.test(id))) throw error(400,'INVALID_BATCH','Select between 1 and 100 files.');
+        const files = ids.map(id => readableFile(id,session)); const active = trackRequest(req,res,session,true);
+        res.writeHead(200, {'Content-Type':'application/x-tar','Content-Disposition':contentDisposition('MCKLTransfer.tar'),'Cache-Control':'no-store'});
+        return streamArchive({files,store,response:res,signal:active.signal,authorize:file => {active.authorize(); readableFile(file.id,session);}});
+      }
+      if (pathname === '/api/direct') {
+        if (req.method === 'GET') return sendJson(res, 200, { transfers: direct.list(session) });
+        if (req.method === 'POST') { const body = await readJson(req); sharing.validateTarget({roomId:'inbox',recipientId:body.recipientId},session); return sendJson(res,201,direct.create(session,body)); }
+      }
+      const directRoute = /^\/api\/direct\/([a-f0-9]{24})(\/(?:signals|complete))?$/.exec(pathname);
+      if (directRoute) {
+        const id=directRoute[1];
+        if (!directRoute[2] && req.method==='GET') return sendJson(res,200,direct.poll(id,session,Number(url.searchParams.get('after') || 0)));
+        if (!directRoute[2] && req.method==='DELETE') return sendJson(res,200,direct.cancel(id,session,(await readJson(req)).reason));
+        if (directRoute[2] === '/complete' && req.method==='POST') { const receipt = direct.complete(id,session,await readJson(req)); await sharing.record({...receipt,type:'direct',fileId:id,roomId:'inbox',transport:'direct',actorId:session.clientId}); return sendJson(res,200,receipt); }
+        if (directRoute[2] === '/signals' && req.method==='POST') return sendJson(res,200,direct.signal(id,session,await readJson(req, 96 * 1024)));
+      }
+      if (pathname === '/api/files' && req.method === 'GET') {
+        const q = (url.searchParams.get('q') || '').slice(0, 200).toLocaleLowerCase();
+        const room = url.searchParams.get('room');
+        const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 100));
+        const all = store.list().filter(file => sharing.canRead(file, session) && (!file.expiresAt || file.expiresAt > now()) && (!room || file.roomId === room || !file.roomId && room === 'shared') && (!q || `${file.name} ${file.relativePath || ''}`.toLocaleLowerCase().includes(q))).sort((a,b) => b.uploadedAt.localeCompare(a.uploadedAt) || b.id.localeCompare(a.id));
+        const cursor = url.searchParams.get('after'); const at = cursor ? all.findIndex(file => file.id === cursor) + 1 : 0;
+        const page = all.slice(at, at + limit);
+        return sendJson(res, 200, { files: page.map(file => publicFile(file, session)), total: all.length, nextCursor: at + limit < all.length ? page.at(-1)?.id : null });
+      }
+      if (pathname === '/api/messages' && req.method === 'GET') return sendJson(res, 200, { messages: messages.filter(message => sharing.canRead(message, session)), clientId: session.clientId });
       if (pathname === '/api/messages' && req.method === 'POST') {
         if (!rateLimit(chatAttempts, session.clientId, 60)) throw error(429, 'RATE_LIMITED', 'Too many messages. Try again in a minute.');
         const body = await readJson(req, 16 * 1024);
         const text = typeof body.text === 'string' ? body.text.trim() : '';
         if (!text) throw error(400, 'MESSAGE_EMPTY', 'Message cannot be empty.');
         if (Array.from(text).length > MAX_MESSAGE_LENGTH) throw error(413, 'MESSAGE_TOO_LONG', 'Message is too long.');
-        const message = { id: crypto.randomBytes(12).toString('hex'), text, senderId: session.clientId, sentAt: new Date(now()).toISOString() };
+        const target = sharing.validateTarget(body, session);
+        const message = { id: crypto.randomBytes(12).toString('hex'), text, senderId: session.clientId, ownerId: session.clientId, ...target, sentAt: new Date(now()).toISOString() };
         messages.push(message);
         if (messages.length > MAX_MESSAGES) messages.splice(0, messages.length - MAX_MESSAGES);
-        broadcast({ type: 'chat', message });
+        broadcast({ type: 'chat', message }, message);
         return sendJson(res, 201, message);
       }
       if (pathname === '/api/events' && req.method === 'GET') return openEvents(req, res, session);
@@ -309,44 +422,56 @@ function createApp(options = {}) {
         const sizeHeader = req.headers['x-file-size'] ?? req.headers['content-length'];
         const expectedSize = sizeHeader === undefined ? undefined : Number(sizeHeader);
         if (expectedSize !== undefined && (!Number.isSafeInteger(expectedSize) || expectedSize < 0)) throw error(400, 'INVALID_SIZE', 'Invalid file size.');
-        const file = await store.upload(req, { ownerId: session.clientId, name, mime: String(req.headers['x-file-type'] || 'application/octet-stream').slice(0, 160), expectedSize, expectedHash: req.headers['x-file-sha256'] });
-        broadcast({ type: 'files', action: 'added' });
+        const active = trackRequest(req, res, session);
+        const file = await store.upload(req, { ownerId: session.clientId, name, mime: String(req.headers['x-file-type'] || 'application/octet-stream').slice(0, 160), expectedSize, expectedHash: req.headers['x-file-sha256'] }, active);
+        await recordFile(file);
+        broadcast({ type: 'files', action: 'added' }, file);
         return sendJson(res, 201, publicFile(file, session));
       }
       if (pathname === '/api/uploads' && req.method === 'POST') {
-        const created = await store.begin(await readJson(req), session.clientId);
+        const body = await readJson(req);
+        const target = sharing.validateTarget(body, session);
+        const active = trackRequest(req, res, session);
+        const created = await store.begin({ ...body, ...target }, session.clientId, active);
         return sendJson(res, 201, created, { Location: `/api/uploads/${created.id}` });
       }
-      const transfer = /^\/api\/uploads\/([a-f0-9]{24})(\/complete)?$/.exec(pathname);
+      const transfer = /^\/api\/uploads\/([a-f0-9]{24})(\/(?:complete|claim|release))?$/.exec(pathname);
       if (transfer) {
         const id = transfer[1];
+        if (transfer[2] === '/claim' && req.method === 'POST') { const body = await readJson(req); return sendJson(res, 200, await store.claim(id, session.clientId, body.clientId)); }
+        if (transfer[2] === '/release' && req.method === 'POST') { const body = await readJson(req); await store.releaseClaim(id, session.clientId, body.clientId); return sendJson(res, 200, { ok: true }); }
+        if (!transfer[2] && req.method === 'GET') { const status = await store.head(id, session.clientId); if (status.file) status.file = publicFile(status.file, session); return sendJson(res, 200, status); }
         if (!transfer[2] && req.method === 'HEAD') {
           const upload = await store.head(id, session.clientId);
-          res.writeHead(200, { 'Upload-Offset': String(upload.offset), 'Upload-Length': String(upload.size), 'Upload-Expires': new Date(upload.expiresAt).toUTCString(), 'Cache-Control': 'no-store' });
+          res.writeHead(200, { 'Upload-Offset': String(upload.offset), 'Upload-Length': String(upload.size), 'Upload-State': upload.state || 'pending', 'Upload-Expires': upload.expiresAt ? new Date(upload.expiresAt).toUTCString() : '', 'Cache-Control': 'no-store' });
           return res.end();
         }
         if (!transfer[2] && req.method === 'PATCH') {
           const offsetText = req.headers['upload-offset'];
           if (typeof offsetText !== 'string' || !/^\d+$/.test(offsetText) || !Number.isSafeInteger(Number(offsetText))) throw error(400, 'INVALID_OFFSET', 'Upload-Offset must be a nonnegative integer.');
-          const updated = await store.append(id, session.clientId, req, { offset: Number(offsetText), checksum: req.headers['x-chunk-sha256'] });
+          const active = trackRequest(req, res, session);
+          const updated = await store.append(id, session.clientId, req, { offset: Number(offsetText), checksum: req.headers['x-chunk-sha256'], clientId: req.headers['upload-client'], ...active });
           res.writeHead(204, { 'Upload-Offset': String(updated.offset), 'Cache-Control': 'no-store' });
           return res.end();
         }
-        if (!transfer[2] && req.method === 'DELETE') { await store.cancel(id, session.clientId); return sendJson(res, 200, { ok: true }); }
-        if (transfer[2] && req.method === 'POST') {
-          const file = await store.complete(id, session.clientId);
-          broadcast({ type: 'files', action: 'added' });
+        if (!transfer[2] && req.method === 'DELETE') { await store.cancel(id, session.clientId, { clientId: req.headers['upload-client'], ...trackRequest(req, res, session), authorize: () => { if (!sessions.get(req)) throw error(401, 'AUTH_REQUIRED', 'Session ended.'); } }); return sendJson(res, 200, { ok: true }); }
+        if (transfer[2] === '/complete' && req.method === 'POST') {
+          const active = trackRequest(req,res,session);
+          const file = await store.complete(id, session.clientId, { clientId: req.headers['upload-client'], ...active, authorize(resource) { if (store.files.has(id) && resource.ownerId === session.clientId) { if (!sessions.get(req)) throw error(401,'AUTH_REQUIRED','Session ended.'); active.signal.throwIfAborted(); } else active.authorize(resource); } });
+          await recordFile(file);
+          broadcast({ type: 'files', action: 'added' }, file);
           return sendJson(res, 201, publicFile(file, session));
         }
       }
       const fileRoute = /^\/api\/files\/([a-f0-9]{24})(\/download)?$/.exec(pathname);
-      if (fileRoute?.[2] && ['GET', 'HEAD'].includes(req.method)) return download(req, res, fileRoute[1]);
+      if (fileRoute?.[2] && ['GET', 'HEAD'].includes(req.method)) return download(req, res, fileRoute[1], session);
       if (fileRoute && !fileRoute[2] && req.method === 'DELETE') {
         const file = store.files.get(fileRoute[1]);
         if (!file) throw error(404, 'NOT_FOUND', 'File not found.');
         if (session.role !== 'admin' && file.ownerId !== session.clientId) throw error(403, 'FORBIDDEN', 'Only the sender or host administrator may delete this file.');
         await store.remove(file.id);
-        broadcast({ type: 'files', action: 'removed' });
+        if (file.ownerId) await sharing.record({ ...file, fileId: file.id, type: 'deleted', actorId: session.clientId });
+        broadcast({ type: 'files', action: 'removed' }, file);
         return sendJson(res, 200, { ok: true });
       }
       throw error(404, 'NOT_FOUND', 'Not found.');
@@ -381,7 +506,7 @@ function createApp(options = {}) {
   async function start() {
     if (server) throw new Error('Application has already started.');
     await store.init();
-    await sessions.init();
+    try { await sessions.init(); await sharing.init(); } catch (failure) { await Promise.allSettled([sessions.stop(), sharing.stop()]); await store.stop(); throw failure; }
     const listener = (req, res) => {
       handle(req, res).catch(failure => {
         if (res.destroyed || res.writableEnded) return;
@@ -390,12 +515,14 @@ function createApp(options = {}) {
         sendJson(res, status, { error: failure.statusCode ? failure.code || 'REQUEST_FAILED' : 'INTERNAL_ERROR', message: failure.statusCode ? failure.message : 'The host could not complete this request.' });
       });
     };
+    try {
     server = tlsKeyFile ? https.createServer({ key: await fsp.readFile(tlsKeyFile), cert: await fsp.readFile(tlsCertFile), minVersion: 'TLSv1.2' }, listener) : http.createServer(listener);
     server.requestTimeout = numberOption(options.requestTimeoutMs ?? process.env.REQUEST_TIMEOUT_MS, 30 * 60 * 1000, 1);
     server.headersTimeout = Math.min(server.requestTimeout, 30_000);
     server.setTimeout(60_000, socket => socket.destroy());
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, host, resolve); });
-    sweepTimer = setInterval(() => { sessions.sweep(); }, 30_000);
+    } catch (failure) { await stop(); throw failure; }
+    sweepTimer = setInterval(() => { sessions.sweep(); direct.sweep(); }, 30_000);
     sweepTimer.unref();
     const actualPort = server.address().port;
     log.log(`MCKL Transfer ${VERSION} running on ${protocol}//localhost:${actualPort}`);
@@ -417,8 +544,7 @@ function createApp(options = {}) {
       server.closeAllConnections();
       await closed;
     }
-    await store.stop();
-    await sessions.stop();
+    try { await Promise.all([sessions.stop(), sharing.stop()]); } finally { await store.stop(); }
   }
 
   return { start, stop, get server() { return server; }, files: store.files, shareCode, adminCode, shareDir };

@@ -27,14 +27,13 @@ function request(port, ca, route, options = {}) {
 
 test('HTTPS verifies its certificate, protects the session cookie, and transfers intact data', { skip: !opensslAvailable && 'OpenSSL is required to generate an ephemeral test certificate' }, async t => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'mckl-tls-'));
-  t.after(() => rm(dir, { recursive: true, force: true }));
   const key = path.join(dir, 'fixture.key');
   const cert = path.join(dir, 'fixture.pem');
   const generated = spawnSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1'], { encoding: 'utf8' });
   assert.equal(generated.status, 0, 'OpenSSL must generate a fresh certificate');
   const app = createApp({ host: '127.0.0.1', port: 0, shareDir: path.join(dir, 'data'), shareCode: '123456', deviceName: 'Synthetic HTTPS host', tlsKeyFile: key, tlsCertFile: cert, logger: { log() {}, warn() {} } });
   await app.start();
-  t.after(() => app.stop());
+  t.after(async () => { await app.stop(); await rm(dir, { recursive: true, force: true }); });
   const port = app.server.address().port;
   const ca = await readFile(cert);
   const config = await request(port, ca, '/api/config');

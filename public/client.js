@@ -5,6 +5,8 @@ const MAX_MESSAGES = 200;
 const MAX_TRANSFERS = 64;
 const MAX_FINISHED = 20;
 const RESUME_STORAGE = 'mckl_uploads_v1';
+const uploadClientId = globalThis.crypto?.getRandomValues ? [...crypto.getRandomValues(new Uint8Array(16))].map(n => n.toString(16).padStart(2, '0')).join('') : null;
+let fileLoadGeneration = 0;
 const state = {
   config: null, files: [], transfers: new Map(), messages: new Map(), devices: [],
   authenticated: false, clientId: null, eventSource: null, eventTimer: null,
@@ -93,6 +95,7 @@ function stopEvents() {
 function showAuth() {
   state.authenticated = false;
   stopEvents();
+  window.MCKLWorkspace?.disconnected();
   for (const item of state.transfers.values()) if (!['done', 'cancelled', 'error', 'paused'].includes(item.phase)) pauseTransfer(item);
   $('#accessPanel').classList.remove('hidden');
   $('#appPanel').classList.add('hidden');
@@ -103,6 +106,7 @@ function showApp() {
   $('#accessPanel').classList.add('hidden');
   $('#appPanel').classList.remove('hidden');
   setOnline(true);
+  window.MCKLWorkspace?.connected();
 }
 async function request(path, options = {}) {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...options });
@@ -169,7 +173,7 @@ function renderFiles() {
     const icon = document.createElement('div'); icon.className = 'file-icon'; icon.textContent = iconFor(file);
     const main = document.createElement('div'); main.className = 'item-main';
     const name = document.createElement('div'); name.className = 'item-name'; name.title = file.name; name.textContent = file.name;
-    const meta = document.createElement('div'); meta.className = 'item-meta'; meta.textContent = `${formatBytes(file.size)} · ${formatDate(file.uploadedAt)}`;
+    const meta = document.createElement('div'); meta.className = 'item-meta'; meta.textContent = `${formatBytes(file.size)} · ${formatDate(file.uploadedAt)}${file.relativePath ? ` · ${file.relativePath}` : ''}`;
     main.append(name, meta);
     const actions = document.createElement('div'); actions.className = 'item-actions';
     const download = document.createElement('button');
@@ -180,6 +184,7 @@ function renderFiles() {
       document.body.append(link); link.click(); link.remove();
     };
     actions.append(download);
+    window.MCKLWorkspace?.fileActions(file, row, actions);
     if (file.canDelete === true || state.config?.permissions?.deleteAll || (state.config?.permissions?.deleteOwn && file.ownerId === state.clientId)) {
       const remove = document.createElement('button');
       remove.type = 'button'; remove.className = 'icon-button danger'; remove.title = t('common.delete'); remove.setAttribute('aria-label', t('files.deleteName', { name: file.name })); remove.textContent = '×';
@@ -193,9 +198,12 @@ function renderFiles() {
   }
 }
 async function loadFiles() {
-  const result = await api('/api/files');
+  const generation = ++fileLoadGeneration;
+  const result = await api(window.MCKLWorkspace?.filesUrl() || '/api/files');
+  if (generation !== fileLoadGeneration) return;
   state.files = result.files || [];
   renderFiles();
+  window.MCKLWorkspace?.filesLoaded(result);
 }
 function formatMessageTime(value) {
   try { return new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); } catch { return ''; }
@@ -238,7 +246,7 @@ async function sendMessage() {
   if (!text) return;
   const button = $('#chatSendButton'); button.disabled = true;
   try {
-    const message = await api('/api/messages', jsonOptions('POST', { text }));
+    const message = await api('/api/messages', jsonOptions('POST', { text, ...(window.MCKLWorkspace?.target() || {}) }));
     addMessage(message); input.value = ''; input.style.height = '';
   } catch (error) { toast(error); }
   finally { button.disabled = false; input.focus(); }
@@ -277,19 +285,19 @@ class FileHasher {
     this.pending.clear();
   }
 }
-function fileKey(file) { return JSON.stringify([file.name, file.size, file.lastModified]); }
+function fileKey(file) { return JSON.stringify([file.name, file.size, file.lastModified, file.webkitRelativePath || '']); }
 function resumeRecords() {
   const records = readStored(RESUME_STORAGE, []);
   return Array.isArray(records) ? records.filter(record => record && typeof record.id === 'string' && typeof record.key === 'string').slice(-32) : [];
 }
 function findResume(item) {
-  return resumeRecords().find(record => record.key === fileKey(item.file) && record.sha256 === item.sha256
+  return resumeRecords().find(record => record.key === fileKey(item.file) && record.sha256 === item.sha256 && JSON.stringify(record.target || {}) === JSON.stringify(item.target || {})
     && ![...state.transfers.values()].some(other => other !== item && other.uploadId === record.id));
 }
 function rememberUpload(item) {
   if (!item.uploadId || !item.sha256) return;
   const records = resumeRecords().filter(record => record.id !== item.uploadId);
-  records.push({ id: item.uploadId, key: fileKey(item.file), sha256: item.sha256, createdAt: Date.now() });
+  records.push({ id: item.uploadId, key: fileKey(item.file), sha256: item.sha256, target: item.target || {}, createdAt: Date.now() });
   writeStored(RESUME_STORAGE, records.slice(-32));
 }
 function forgetUpload(item) { writeStored(RESUME_STORAGE, resumeRecords().filter(record => record.id !== item.uploadId)); }
@@ -372,9 +380,9 @@ function resumeTransfer(item) {
 }
 async function removeUpload(item) {
   if (!item.uploadId) return;
-  try { await api(`/api/uploads/${item.uploadId}`, { method: 'DELETE' }); }
+  try { await api(`/api/uploads/${item.uploadId}`, { method: 'DELETE', headers: uploadHeaders() }); }
   catch (error) {
-    if (![401, 404, 410].includes(error.status)) { item.error = localizedError('error.cancelUnconfirmed'); throw error; }
+    if (![404, 410].includes(error.status)) { item.error = localizedError('error.cancelUnconfirmed'); throw error; }
   }
   forgetUpload(item); item.uploadId = null; item.offset = 0;
 }
@@ -397,7 +405,7 @@ function enqueueFiles(files) {
     if (state.transfers.size >= MAX_TRANSFERS) { toast(t('error.queueFull')); break; }
     if (file.size > state.config.maxFileSize) { toast(t('error.fileTooLarge', { name: file.name, size: formatBytes(state.config.maxFileSize) })); continue; }
     const id = `transfer-${++state.sequence}`;
-    state.transfers.set(id, { id, file, phase: 'queued', intent: null, error: null, offset: 0, loaded: 0, speed: 0, hashProgress: 0, running: false, uploadId: null, sha256: null, elements: null });
+    state.transfers.set(id, { id, file, target: window.MCKLWorkspace?.target() || {}, relativePath: file.webkitRelativePath || undefined, phase: 'queued', intent: null, error: null, offset: 0, loaded: 0, speed: 0, hashProgress: 0, running: false, uploadId: null, sha256: null, elements: null });
   }
   scheduleTransfers(); pumpUploads();
 }
@@ -421,7 +429,16 @@ function delay(ms, signal) {
     signal.addEventListener('abort', abort, { once: true });
   });
 }
+function uploadHeaders() { return state.config?.features?.leases && uploadClientId ? { 'Upload-Client': uploadClientId } : {}; }
+async function claimUpload(item, signal) {
+  if (state.config?.features?.leases && uploadClientId) await api(`/api/uploads/${item.uploadId}/claim`, jsonOptions('POST', { clientId: uploadClientId }, signal));
+}
 async function serverOffset(item, signal) {
+  if (state.config?.protocolVersion >= 2) {
+    const status = await api(`/api/uploads/${item.uploadId}`, { signal });
+    if (status.state === 'complete') item.completedFile = status.file;
+    return status.offset;
+  }
   for (let attempt = 0; ; attempt++) {
     try {
       const response = await request(`/api/uploads/${item.uploadId}`, { method: 'HEAD', signal });
@@ -452,6 +469,7 @@ function sendChunk(item, blob, offset, checksum, signal) {
     xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
     xhr.setRequestHeader('Upload-Offset', String(offset));
     xhr.setRequestHeader('x-chunk-sha256', checksum);
+    for (const [key, value] of Object.entries(uploadHeaders())) xhr.setRequestHeader(key, value);
     xhr.upload.onprogress = (event) => {
       item.loaded = offset + event.loaded;
       const elapsed = (performance.now() - started) / 1000;
@@ -485,6 +503,7 @@ async function runUpload(item) {
   const { signal } = controller;
   let hasher;
   try {
+    item.startedAt ||= performance.now();
     hasher = new FileHasher(signal);
     item.phase = 'hashing'; scheduleTransfers();
     if (!item.sha256) item.sha256 = await hasher.digest(item.file, (loaded, total) => {
@@ -501,29 +520,49 @@ async function runUpload(item) {
     }
     let chunkSize = state.config.chunkSize || 4 * 1024 * 1024;
     if (!item.uploadId) {
-      const upload = await api('/api/uploads', jsonOptions('POST', { name: item.file.name, size: item.file.size, mime: item.file.type || 'application/octet-stream', sha256: item.sha256 }, signal));
+      const upload = await api('/api/uploads', jsonOptions('POST', { name: item.file.name, size: item.file.size, mime: item.file.type || 'application/octet-stream', sha256: item.sha256, ...item.target, relativePath: item.relativePath, ...(state.config?.features?.leases && uploadClientId ? { clientId: uploadClientId } : {}) }, signal));
       item.uploadId = upload.id; item.offset = upload.offset || 0;
       chunkSize = upload.chunkSize || chunkSize;
       rememberUpload(item);
     }
     chunkSize = Math.max(1, Math.min(8 * 1024 * 1024, chunkSize));
     item.phase = 'uploading'; item.loaded = item.offset; scheduleTransfers();
-    let conflicts = 0;
-    while (item.offset < item.file.size) {
-      if (signal.aborted) throw abortError();
-      const offset = item.offset;
+    let pending = null;
+    const prepare = async offset => {
       const blob = item.file.slice(offset, Math.min(item.file.size, offset + chunkSize));
-      const checksum = await hasher.digest(blob);
-      try { item.offset = await sendChunk(item, blob, offset, checksum, signal); conflicts = 0; }
+      return { offset, blob, checksum: await hasher.digest(blob) };
+    };
+    let retries = 0;
+    while (item.offset < item.file.size && !item.completedFile) {
+      signal.throwIfAborted();
+      await claimUpload(item, signal);
+      const chunk = pending ? await pending : await prepare(item.offset);
+      pending = null;
+      if (chunk.offset !== item.offset) continue;
+      const nextOffset = item.offset + chunk.blob.size;
+      // Exactly one prefetched chunk. Its rejection is observed even on abort.
+      if (nextOffset < item.file.size) { pending = prepare(nextOffset); pending.catch(() => {}); }
+      try { item.offset = await sendChunk(item, chunk.blob, chunk.offset, chunk.checksum, signal); retries = 0; }
       catch (error) {
-        if (error.status !== 409 || conflicts++ >= 5) throw error;
-        item.offset = await serverOffset(item, signal);
+        if (isAbort(error) || (error.status && ![409,429,500,502,503,504].includes(error.status)) || retries++ >= 3) throw error;
+        await delay(Math.min(4000, 250 * 2 ** retries) + Math.random() * 100, signal);
+        item.offset = await serverOffset(item, signal); pending = null;
       }
-      item.loaded = item.offset; scheduleTransfers();
+      item.loaded = item.offset;
+      item.speed = (item.offset) / Math.max(0.001, (performance.now() - item.startedAt) / 1000);
+      scheduleTransfers();
     }
-    if (signal.aborted) throw abortError();
+    signal.throwIfAborted();
     item.phase = 'verifying'; scheduleTransfers();
-    const file = await api(`/api/uploads/${item.uploadId}/complete`, jsonOptions('POST', {}, signal));
+    let file = item.completedFile;
+    for (let attempt = 0; !file; attempt++) {
+      try { file = await api(`/api/uploads/${item.uploadId}/complete`, { ...jsonOptions('POST', {}, signal), headers: { 'Content-Type':'application/json', ...uploadHeaders() } }); }
+      catch (error) {
+        if (!state.config?.protocolVersion || isAbort(error) || error.status && error.status < 500 && error.status !== 409 || attempt >= 2) throw error;
+        await delay(500 * (attempt + 1), signal);
+        await serverOffset(item, signal); file = item.completedFile;
+      }
+    }
     if (file.hash !== item.sha256 || file.size !== item.file.size) throw localizedError('error.checksumMismatch');
     forgetUpload(item); item.uploadId = null;
     item.phase = 'done'; item.loaded = item.file.size;
@@ -535,7 +574,11 @@ async function runUpload(item) {
     if (item.intent === 'cancel') await finishCancel(item);
     else if (isAbort(error) || item.intent === 'pause') item.phase = 'paused';
     else { item.phase = 'error'; item.error = error; }
-  } finally { hasher?.close(); scheduleTransfers(); }
+  } finally {
+    hasher?.close();
+    if (item.uploadId && state.config?.features?.leases && uploadClientId) await api(`/api/uploads/${item.uploadId}/release`, jsonOptions('POST', { clientId: uploadClientId })).catch(() => {});
+    scheduleTransfers();
+  }
 }
 async function loadDevices() {
   if (!state.config?.permissions?.manageDevices) return;
@@ -562,6 +605,7 @@ function renderDevices() {
         toast(t('devices.revoked'));
       } catch (error) { toast(error); } finally { revoke.disabled = false; }
     };
+    if (device.approved === false) { const approve = document.createElement('button'); approve.className = 'button'; approve.textContent = t('devices.approve'); approve.onclick = async () => { try { await api(`/api/devices/${device.id}`, jsonOptions('POST', {})); await loadDevices(); } catch(error) { toast(error); } }; row.append(approve); }
     row.append(main, revoke); list.append(row);
   }
 }
@@ -569,7 +613,9 @@ function connectEvents() {
   stopEvents();
   if (!state.authenticated) return;
   const source = new EventSource('/api/events'); state.eventSource = source;
-  source.addEventListener('ready', () => { state.reconnectDelay = 1000; setOnline(true); });
+  source.addEventListener('ready', () => { state.reconnectDelay = 1000; setOnline(true); void Promise.all([loadFiles(), loadMessages()]).catch(() => {}); window.MCKLWorkspace?.refresh(); });
+  source.addEventListener('scope', () => { void loadFiles().catch(() => {}); void loadMessages().catch(() => {}); window.MCKLWorkspace?.refresh(); });
+  source.addEventListener('direct', () => window.MCKLWorkspace?.refreshDirect());
   source.addEventListener('files', () => { void loadFiles().catch(() => {}); });
   source.addEventListener('chat', event => { try { addMessage(JSON.parse(event.data).message); } catch { /* Ignore a malformed event. */ } });
   source.addEventListener('revoked', () => { showAuth(); toast(t('session.ended')); });
@@ -577,7 +623,7 @@ function connectEvents() {
     source.close(); setOnline(false);
     if (!state.authenticated) return;
     state.eventTimer = setTimeout(async () => {
-      try { await loadMessages(); await loadConfig(); if (state.authenticated) connectEvents(); }
+      try { await loadMessages(); await loadFiles(); await loadConfig(); if (state.authenticated) connectEvents(); }
       catch (error) { if (error.status !== 401 && state.authenticated) connectEvents(); }
     }, state.reconnectDelay);
     state.reconnectDelay = Math.min(30000, state.reconnectDelay * 2);
@@ -587,11 +633,14 @@ async function authenticate(code) {
   setAuthError(null); $('#connectButton').disabled = true;
   try {
     const deviceName = $('#deviceNameInput').value.trim() || t('common.browser');
-    const result = await api('/api/auth', jsonOptions('POST', { code, deviceName, rememberDevice: $('#rememberDevice').checked }));
+    const result = await api('/api/auth', jsonOptions('POST', { code, deviceName, rememberDevice: $('#rememberDevice').checked, ...(window.MCKLWorkspace?.invite() ? { invite: window.MCKLWorkspace.invite() } : {}) }));
     if (state.clientId && state.clientId !== result.clientId) resetUploadOwnership();
+    window.MCKLWorkspace?.consumeInvite();
     state.clientId = result.clientId; writeStored('mckl_device_name', deviceName);
     state.authenticated = true;
-    await loadConfig(); await Promise.all([loadFiles(), loadMessages()]);
+    await loadConfig();
+    if (state.config.approved === false) { window.MCKLWorkspace?.pending(); return; }
+    await Promise.all([loadFiles(), loadMessages()]);
     showApp(); connectEvents();
     $('#codeInput').value = '';
     if (state.config.permissions?.manageDevices) void loadDevices().catch(error => toast(error));
@@ -629,6 +678,7 @@ function renderLanguage() {
 function changeLanguage(language) {
   i18n.setLanguage(language);
   renderLanguage();
+  window.MCKLWorkspace?.render();
 }
 i18n.apply();
 renderLanguage();

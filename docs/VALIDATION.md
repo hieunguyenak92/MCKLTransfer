@@ -1,5 +1,14 @@
 # Release validation record
 
+## 0.5.0 — current workspace verification, 2026-11-06
+
+- Full Node 26.13.0 macOS ARM64 suite: **140/140 passed**, 0 skipped, including direct broker/client, storage locks and quotas, session revocation/approval/invitations, room/inbox ACL, retention, pagination/search, TAR batches, idempotent completion, upload leases and active-request aborts.
+- Source allowlist and JavaScript syntax check: **68 files / 33 JavaScript files passed**; `git diff --check` passed. The check is an explicit snapshot/pattern review, not proof that every historical commit is free of secrets.
+- Real Chromium 151 loopback scenario with synthetic 12 MiB data: hub upload digest, private inbox isolation (sender/recipient/outsider `1/1/0`), verified disk save and SHA-256 receipt, local QR invitation rendering, direct WebRTC transfer with matching confirmation code, direct digest verification and 375px layout width all passed. No page errors were observed. This is a desktop loopback scenario, not physical LAN or mobile evidence.
+- Browser direct transfer uses two browser contexts and the host signaling broker. It verifies explicit receive acceptance, both-side confirmation and bounded sink writes. TURN, Safari/iOS and real cross-network relay were not tested.
+- Loopback benchmark runs from the earlier audit remain diagnostic only. No universal LAN speed claim is made; run the benchmark/iperf matrix in [the upgrade audit](research/upgrade-audit-2026-11.md) on the actual devices and network before publishing throughput numbers.
+
+
 ## 0.2.0-alpha.2 — 2026-11-04
 
 This update adds complete English, Japanese, Spanish, Portuguese, Thai and Simplified Chinese READMEs alongside Vietnamese. All seven keep the commands, configuration defaults, security model and alpha limitations. The app supports **Vietnamese and English only**, with an accessible selector, browser-language detection, English fallback and a local saved choice. File names, device names and chat content remain user data and are not translated.

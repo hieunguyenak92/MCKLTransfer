@@ -185,7 +185,7 @@ test('resumable API preserves verified offsets, ownership and data across a clea
   assert.equal(file.hash, sha256(body));
   assert.equal(file.ownerId, owner.payload.clientId);
   assert.equal(file.size, body.length);
-  assert.equal((await app.request(`/api/uploads/${upload.id}`, { method: 'HEAD', headers: { cookie: owner.cookie } })).status, 404);
+  assert.equal((await app.request(`/api/uploads/${upload.id}`, { method: 'HEAD', headers: { cookie: owner.cookie } })).headers.get('Upload-State'), 'complete');
   const downloaded = await app.request(`/api/files/${file.id}/download`, { headers: { cookie: owner.cookie } });
   assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()), body);
 });

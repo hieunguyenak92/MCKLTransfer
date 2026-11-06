@@ -3,3 +3,8 @@ Copyright 2026 hieunguyenak92
 
 Licensed under the Apache License, Version 2.0.
 See LICENSE for the full license text.
+
+Third-party browser component:
+QR Code generator library by Project Nayuki, MIT License.
+Source: https://www.nayuki.io/page/qr-code-generator-library
+The full copyright and MIT permission notice is retained in public/vendor/qrcodegen.js.

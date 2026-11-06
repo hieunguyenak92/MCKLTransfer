@@ -4,125 +4,97 @@
 
 # MCKL Transfer
 
+**Tus archivos. Tus dispositivos. Tu propio espacio.**
+
+Comparte desde el navegador con un servidor que controlas: para ti, tu familia o un equipo pequeño.
+
+[Descargar la última versión](https://github.com/hieunguyenak92/MCKLTransfer/releases/latest) · [Configuración](../CONFIGURATION.md) · [Apoyar con una estrella](https://github.com/hieunguyenak92/MCKLTransfer)
+
+**0.5.0 · Apache-2.0 · Sin instalar clientes · Sin dependencias npm de ejecución**
+
 </div>
 
-Comparte archivos y chatea a través de tu propio servidor en una LAN o entre dispositivos autorizados en una red superpuesta (overlay). Solo el servidor necesita Node.js; los demás dispositivos usan un navegador. No hay cuentas de nube de MCKL, analítica, base de datos ni dependencias npm de ejecución.
+Pasa un vídeo al ordenador, envía documentos a otro dispositivo o crea una pequeña bandeja de entrada para tu equipo. MCKL Transfer convierte un equipo en tu punto de intercambio. Los demás se conectan con el navegador. No necesitas una cuenta de nube de MCKL.
 
-**0.2.0-alpha.2 · Apache-2.0 · experimental.** Consulta los [resultados de verificación](../VALIDATION.md) y el [modelo de seguridad](../../SECURITY.md) antes de desplegarlo. No se garantiza soporte estable ni una velocidad LAN determinada en todos los dispositivos.
+## Lo que marca la diferencia
 
-## Inicio rápido en una red de confianza
+| Función | Para qué sirve |
+|---|---|
+| Subidas reanudables | Pausa, reintenta y verifica SHA-256; recupera el mismo resultado si se pierde la respuesta final |
+| Compartir con intención | Espacio común, inbox por destinatario y salas con miembros elegidos |
+| Invitaciones por QR | Enlaces de un solo uso con caducidad y aprobación opcional del host |
+| Carpetas y descargas por lotes | Conserva rutas relativas y descarga una selección como `.tar` por streaming |
+| Herramientas cotidianas | Búsqueda, chat, historial de transferencias y caducidad de archivos |
+| Transferencia directa experimental | Sesiones WebRTC aceptadas por el destinatario, con diagnóstico direct/relay |
+| Recursos bajo control | Cuotas por dispositivo, límite de archivos y descargas, y leases de subida entre pestañas |
 
-Instala Node.js **24, a partir de 24.22.2**, o **26, a partir de 26.13.0**, con los parches actualizados. Desde el directorio del código fuente:
+## Empieza en minutos
+
+En el host, usa Node.js **24.x desde 24.22.2**, o **26.x desde 26.13.0**.
 
 ```sh
+git clone https://github.com/hieunguyenak92/MCKLTransfer.git
+cd MCKLTransfer
 npm start
 ```
 
-No es necesario ejecutar `npm install`. La terminal muestra las direcciones LAN, un código de acceso de seis dígitos y un **código de administrador independiente**. Abre la dirección LAN en otro dispositivo, introduce un nombre de dispositivo y el código de acceso. Entrega el código de administrador únicamente a quien gestione el servidor. Los códigos nunca se exponen mediante la API, ni siquiera en localhost.
+No hace falta `npm install`. También puedes descargar el código desde [Releases](https://github.com/hieunguyenak92/MCKLTransfer/releases).
 
-La conexión HTTP predeterminada no está cifrada: úsala solo en una red que controles y con personas de confianza. Usa HTTPS o una red superpuesta controlada para otras conexiones. No reenvíes este puerto desde el router a Internet.
+1. Abre la URL LAN de la terminal en el navegador de otro dispositivo.
+2. Introduce un nombre y el código de acceso de seis dígitos.
+3. Elige el destino y envía archivos o carpetas.
 
-### Uso de la aplicación
+El **código de administrador independiente** es para quien gestiona el host. Desde su panel puede aprobar o revocar dispositivos, crear invitaciones y administrar salas.
 
-- Selecciona o arrastra varios archivos. La cola de toda la aplicación transfiere hasta dos archivos a la vez, con velocidad, tiempo estimado y controles para pausar, reanudar, reintentar y cancelar.
-- Tras perder la conexión o recargar la página, vuelve a seleccionar el mismo archivo para reanudar. Debes conservar la cookie del dispositivo y la subida no debe haber caducado. El navegador no conserva automáticamente el permiso para leer un archivo después de cerrar la página.
-- Usa **una sola pestaña de subida por servidor**. Las pestañas del mismo origen comparten cookies y registros de reanudación. Si dos pestañas reanudan la misma subida, cancelarla en una puede borrar el progreso parcial de la otra. El archivo original permanece intacto; la otra pestaña debe empezar de nuevo al recibir `404`. Esta versión alfa no coordina la propiedad de las subidas entre pestañas.
-- Antes de enviar, el navegador lee el archivo original para calcular SHA-256; el host verifica cada bloque y el archivo completo. El cálculo del hash requiere una lectura adicional y puede ser lento en dispositivos menos potentes. No se mantiene el archivo entero en RAM.
-- Los archivos completados aparecen en la lista compartida; todos los miembros con sesión iniciada pueden descargarlos. Los miembros solo pueden eliminar los archivos que hayan enviado. El administrador puede eliminar cualquier archivo y revocar sesiones de dispositivos.
-- El chat compartido conserva hasta 200 mensajes en RAM; se pierden al reiniciar el host. Mantén la página abierta durante las transferencias, sobre todo en teléfonos. La PWA no garantiza transferencias en segundo plano ni que continúen cuando iOS bloquee la pantalla.
+HTTP, la opción predeterminada, no cifra la conexión. Úsalo en una LAN controlada y de confianza; para otras conexiones configura HTTPS de confianza o una red Tailscale/WireGuard con acceso restringido. No publiques directamente este puerto HTTP en Internet.
 
-El modelo es **navegador A → el host almacena el archivo → el navegador B lo descarga**. «Subida completada» significa que el host ha recibido y verificado el archivo; no significa que B lo haya descargado o guardado. El host puede leer tanto los archivos como el chat; no hay E2EE ni salas privadas por destinatario.
+## Un espacio común o una bandeja privada
 
-## Idioma
+- **Espacio compartido:** archivos y chat para los miembros aprobados.
+- **Inbox privado:** acceso para el remitente, el destinatario elegido y el administrador de confianza.
+- **Salas:** el administrador elige sus miembros; los permisos se aplican a listados, descargas y eventos.
 
-La interfaz de la aplicación está disponible en **Tiếng Việt** y **English**. Usa el selector de idioma de la barra superior; tu elección se guarda en este navegador. La primera vez, la aplicación sigue el idioma del navegador y usa inglés si no está disponible. Cambiar de idioma no recarga la página ni detiene las transferencias; no se traducen el contenido de los archivos, los mensajes del chat ni los nombres de los dispositivos. El README está disponible en siete idiomas mediante los enlaces al principio de la página.
-
-## Configuración
-
-La aplicación lee las variables de entorno del proceso; no carga archivos `.env` automáticamente. Los tamaños se expresan en bytes y los tiempos en milisegundos.
-
-| Variable | Valor predeterminado | Significado |
-|---|---|---|
-| `HOST`, `PORT` | `0.0.0.0`, `8787` | Interfaz y puerto de escucha; IPv4 de forma predeterminada |
-| `SHARE_DIR` | `./shared` junto al código fuente | Directorio de datos privados; es preferible situarlo fuera del repositorio |
-| `DEVICE_NAME` | hostname | Nombre del host, visible solo tras iniciar sesión y en la terminal |
-| `SHARE_CODE` | Seis dígitos aleatorios en cada inicio | Código de miembro; se sigue aceptando `LAN_SHARE_CODE` por compatibilidad |
-| `ADMIN_CODE` | Valor aleatorio independiente en cada inicio | Al menos 24 caracteres; mantenlo en secreto |
-| `MAX_FILE_SIZE` | `21474836480` (20 GiB) | Límite por archivo |
-| `MAX_TOTAL_SIZE` | `107374182400` (100 GiB) | Archivos completados más capacidad reservada para subidas |
-| `MIN_FREE_SPACE` | `134217728` (128 MiB) | Espacio libre de reserva; no es una cuota de disco del sistema operativo |
-| `CHUNK_SIZE` | `4194304` (4 MiB) | Máximo de 16 MiB por solicitud de subida de un bloque |
-| `MAX_CONCURRENT_UPLOADS` | `4` | Operaciones simultáneas de escritura/cálculo de hash de subidas en el servidor |
-| `MAX_PENDING_UPLOADS` | `128` | Número de subidas incompletas conservadas |
-| `UPLOAD_TTL_MS` | `86400000` (24 horas) | Plazo absoluto desde la creación de una subida incompleta |
-| `SESSION_TTL_MS`, `MAX_DEVICES` | `43200000` (12 horas), `128` | Duración de una sesión normal y total de sesiones de dispositivos; las sesiones recordadas duran hasta 30 días |
-| `REQUEST_TIMEOUT_MS` | `1800000` (30 minutos) | Tiempo para recibir una solicitud; los sockets inactivos durante 60 segundos se desconectan |
-| `TLS_KEY_FILE`, `TLS_CERT_FILE` | Sin definir | Par de clave privada/certificado PEM para HTTPS directo |
-| `PUBLIC_URL` | Sin definir | Origen externo del proxy, como `https://transfer.example.org`; sin ruta ni consulta |
-| `ALLOWED_HOSTS` | Hostname/interfaces locales | Nombres de host/IP concretos adicionales, separados por comas; sin comodines ni puertos |
-
-Ejemplo en PowerShell con un directorio de datos independiente:
-
-```powershell
-$env:SHARE_DIR = "D:\MCKL-data"
-$env:DEVICE_NAME = "Home transfer host"
-npm start
-```
-
-Cambiar los códigos después de reiniciar no revoca las sesiones ya concedidas. Usa el panel de gestión de dispositivos para revocarlas. Si se filtra un PIN, cambia el PIN **y** revoca las sesiones que no sean de confianza. Las cookies y la propiedad de los archivos se conservan tras reiniciar. Cerrar sesión o borrar las cookies y volver a vincular crea una identidad nueva; el administrador aún puede eliminar los archivos antiguos.
-
-## HTTPS y conexiones entre redes
-
-### HTTPS directo
-
-Obtén un certificado cuyo SAN coincida con el nombre de host/IP utilizado, emitido por una CA en la que confíen todos los dispositivos. Guarda la clave fuera del código fuente, restringe sus permisos de lectura y configura ambas variables:
+El botón de invitación crea un enlace y un QR válidos durante diez minutos. Se pueden utilizar una sola vez y no sobreviven al reinicio del servidor. Para exigir aprobación del host al conectar:
 
 ```sh
-TLS_KEY_FILE=/secure/mckl/server.key TLS_CERT_FILE=/secure/mckl/server.pem npm start
+REQUIRE_APPROVAL=1 npm start
 ```
 
-Abre la URL `https://...` correspondiente. No ignores los errores de verificación del certificado. Los certificados autofirmados requieren un procedimiento, mediante un canal de confianza, para instalar la confianza en la CA o comprobar las huellas; la aplicación no automatiza la vinculación de certificados. Las cookies HTTPS usan `Secure`, `HttpOnly` y `SameSite=Strict`.
+Si se corta una subida, vuelve a seleccionar el mismo archivo. Se necesitan la misma cookie y una subida que no haya caducado. Los leases del servidor impiden que varias pestañas modifiquen simultáneamente la misma subida.
 
-### Grupos privados mediante Tailscale o WireGuard
+«Guardado en el host» y «guardado por el destinatario» son estados distintos. En los navegadores compatibles, el guardado verificado envía un recibo después de escribir el archivo y comprobar SHA-256.
 
-Instala la red superpuesta en los dispositivos, autoriza a los miembros previstos y limita el puerto del servicio. Mantén la autenticación de MCKL. Con WireGuard gestionas las claves, el enrutamiento, el firewall y el DNS; con Tailscale comprueba las políticas y las rutas directas o por relay. Un rango de IP privadas no demuestra por sí solo que un dispositivo sea de confianza.
+## WebRTC directo — experimental
 
-Una opción HTTPS para una tailnet es [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve). Una vez que el host tenga un nombre DNS y HTTPS esté configurado en la tailnet, ejecuta MCKL solo en loopback con ese origen:
+Cuando ambos dispositivos están conectados, puedes elegir una sesión que no almacena el archivo en el host.
 
-```sh
-HOST=127.0.0.1 PUBLIC_URL=https://YOUR-HOST.YOUR-TAILNET.ts.net npm start
-```
+1. Selecciona al destinatario y el archivo para envío directo.
+2. El destinatario acepta y elige dónde guardarlo.
+3. **Comparad los códigos de ambos dispositivos mediante otro canal de confianza y confirmad en los dos.**
+4. El receptor escribe bloques pequeños y verifica el tamaño y SHA-256.
 
-En otra terminal:
+Requiere HTTPS o localhost. Para recibir se necesita `showSaveFilePicker`; el objetivo principal es Chromium de escritorio. El archivo completo no se acumula en un Blob en RAM. En dispositivos no compatibles o si la conexión falla, puedes elegir explícitamente la ruta por el host. Un cambio de almacenamiento o privacidad no queda oculto en un fallback automático.
 
-```sh
-tailscale serve --bg http://127.0.0.1:8787
-tailscale serve status
-```
+No se configura ningún STUN/TURN externo de forma predeterminada. Puedes definir servidores propios mediante `ICE_SERVERS`. La ruta relay indica el uso de TURN; no se garantiza una conexión directa en todas las redes. Consulta la [configuración](../CONFIGURATION.md).
 
-Abre exactamente la URL HTTPS que proporciona Serve. Este servicio es para la tailnet; limita tu política de acceso. Consulta la [CLI de Serve](https://tailscale.com/docs/reference/tailscale-cli/serve) para conocer los requisitos y cómo desactivarlo. MCKL no instala ni configura Tailscale automáticamente, y esta versión no se ha probado en una tailnet real.
+## Privacidad y límites claros
 
-Otros proxies inversos deben reenviar streaming/SSE sin almacenamiento intermedio, conservar Host o definir `PUBLIC_URL` correctamente, configurar límites de tiempo/tamaño del cuerpo adecuados y restringir el acceso al servidor de origen al proxy de confianza. La aplicación no confía en `X-Forwarded-*` para determinar si la conexión es segura.
+El host puede leer los archivos y chats que pasan por él. El inbox privado aplica control de acceso; no ofrece E2EE frente al host. El cifrado de la sesión directa y la comparación de códigos tampoco protegen contra JavaScript malicioso servido por un host comprometido.
 
-## Datos, actualizaciones y copias de seguridad
+Mantén la página abierta durante la transferencia, especialmente en móviles. La PWA no garantiza envíos en segundo plano ni con la pantalla del iPhone bloqueada. No incluye escritorio remoto.
 
-El host guarda `.mckl-manifest.json`, `.mckl-devices.json` (hashes de los tokens de sesión), `.mckl-uploads.json` y `.mckl-objects/` en `SHARE_DIR`. Los nuevos contenidos se almacenan por ID; los nombres visibles están en el manifiesto. No edites ni elimines archivos internos mientras el servidor esté en ejecución. No ejecutes dos procesos sobre el mismo `SHARE_DIR`.
+## Operación y actualizaciones
 
-Detén el host antes de realizar una copia de **todo** el directorio de datos. Las copias contienen archivos y estado de acceso del grupo, por lo que deben protegerse. Esta alfa lee manifiestos del MVP antiguo con archivos normales válidos; no migra automáticamente los contenidos antiguos al almacenamiento por objetos. Solo el administrador puede eliminar archivos antiguos sin propietario. Haz una copia antes de actualizar; no se admite volver a una versión anterior una vez escrito el nuevo formato de manifiesto.
+- `SHARE_DIR` contiene los datos privados. Consulta [Configuración](../CONFIGURATION.md) para cuotas, límites de archivos, caducidad, HTTPS e ICE. Los archivos `.env` no se cargan automáticamente.
+- Antes de actualizar, detén el servidor y protege una copia de todo el directorio de datos. Un bloqueo rechaza otro proceso de host que use el mismo directorio.
+- Las sesiones se conservan tras un apagado y reinicio normales. Tras una interrupción inesperada se exige volver a vincular por seguridad; la recuperación de la propiedad anterior requiere al administrador.
+- La caducidad no equivale a borrado seguro ni elimina copias de seguridad. No se garantiza un comportamiento uniforme en unidades de red o ante cortes de energía.
 
-Usa únicamente un sistema de archivos local de confianza con ACL estrictas. Se limpian las subidas incompletas caducadas; los archivos completados no se eliminan automáticamente. No se han verificado unidades de red, sincronización en la nube del directorio de datos, cortes de energía reales ni el hardware de almacenamiento. El renombrado atómico/fsync no garantiza protección frente a todos los fallos.
+La velocidad depende de red, disco, cálculo de hashes y dispositivo. Los métodos y el alcance de la verificación se documentan en [Validación](../VALIDATION.md); una medición loopback no es una promesa de velocidad LAN.
 
-## Si otro dispositivo no puede conectarse
+## Idiomas y desarrollo
 
-Elige la URL IPv4 de la LAN que aparece en la terminal, usa la misma Wi-Fi y evita el aislamiento de invitados/AP. Comprueba que el firewall abra el puerto solo para las redes/dispositivos previstos. Comprueba el estado desde otro equipo, sustituyendo la dirección de ejemplo:
-
-```sh
-curl --connect-timeout 5 http://192.168.1.10:8787/api/health
-```
-
-La respuesta esperada es `{"ok":true}`. Un timeout suele requerir revisar el enrutamiento/firewall; un `403` requiere revisar hostname/Origin y `ALLOWED_HOSTS`/`PUBLIC_URL`. No añadas un comodín para evitar el error. El navegador puede solicitar permiso para acceder a la red local.
-
-## Desarrollo, pruebas y versiones
+La aplicación permite cambiar entre **Tiếng Việt y English**. El README está disponible en siete idiomas desde los enlaces superiores.
 
 ```sh
 npm run check
@@ -131,14 +103,8 @@ npm run release:check
 npm run release:source
 ```
 
-El exportador de código fuente usa una lista explícita de archivos permitidos, vuelve a comprobar el archivo comprimido y escribe SHA-256 en `release/`. No comprimas todo el directorio de trabajo. `.gitignore` no excluye archivos de los ZIP de Finder ni elimina datos ya confirmados en Git. Mantén `private: true` para impedir una publicación accidental en npm; el código fuente sigue bajo Apache-2.0.
+[Protocolo](../PROTOCOL.md) · [Seguridad](../../SECURITY.md) · [Contribuir](../../CONTRIBUTING.md)
 
-- [Contribuir](../../CONTRIBUTING.md), [seguridad](../../SECURITY.md), [lista de publicación](../RELEASE_CHECKLIST.md).
-- [Protocolo alfa](../PROTOCOL.md), [pruebas y límites de verificación](../VALIDATION.md).
-- [Arquitectura](../research/architecture.md), [rendimiento](../research/performance.md), [licencia y hoja de ruta](../research/license-and-roadmap.md).
+Si te resulta útil, deja una **estrella** para apoyar el proyecto. Los informes reproducibles y las pruebas en dispositivos reales también ayudan a mejorar la siguiente versión.
 
-El descubrimiento/QR, WebRTC, el intercambio del portapapeles iniciado por el usuario, la transferencia de carpetas y compartir pantalla forman parte de la hoja de ruta. Un escritorio remoto completo requiere un agente nativo y un modelo de consentimiento independiente; esta versión no incluye control remoto.
-
-## Licencia
-
-[Apache License 2.0](../../LICENSE). Copyright 2026 hieunguyenak92; consulta [NOTICE](../../NOTICE). Se permiten el uso, la modificación y la distribución, incluido el uso comercial, según los términos de la licencia. Conserva LICENSE/NOTICE y documenta los cambios según los términos aplicables. No se ofrece garantía.
+[Apache License 2.0](../../LICENSE): uso comercial, modificación y distribución según sus términos. Conserva [NOTICE](../../NOTICE), incluido el aviso MIT de la biblioteca QR. Sin garantía.

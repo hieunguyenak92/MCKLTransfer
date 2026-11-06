@@ -1,5 +1,5 @@
 (() => {
-  const version = '0.2.0-alpha.2';
+  const version = '0.5.0';
 
   function showRecovery() {
     const main = document.createElement('main');
@@ -45,6 +45,8 @@
       if (!window.MCKLI18n) await loadScript('/i18n.js');
       if (!window.MCKLI18n) throw new Error('Translations unavailable');
       await loadScript('/client.js');
+      await loadScript('/vendor/qrcodegen.js');
+      await loadScript('/workspace.js');
     } catch { showRecovery(); }
   }
 

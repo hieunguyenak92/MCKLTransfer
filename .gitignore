@@ -37,3 +37,9 @@ npm-debug.log*
 ._*
 Thumbs.db
 Desktop.ini
+
+# Private 0.5 runtime journals and writer lock.
+.mckl-sharing.json*
+.mckl-revocations.json*
+.mckl-sessions-active.json*
+.mckl-lock*

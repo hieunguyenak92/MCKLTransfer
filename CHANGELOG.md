@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Added private shared rooms and recipient inboxes with server-side access control, expiring single-use QR invitations, optional device approval, retention, search, pagination, history and streamed batch archives.
+- Added idempotent resumable completion, per-device quotas and upload leases for multi-tab safety, single-writer storage locking, durable session revocation and active-request cancellation.
+- Added experimental direct WebRTC transfer with explicit accept, matching authentication code, bounded streaming sink, integrity receipt, route diagnostics and explicit hub fallback.
+- Updated the browser UI, Vietnamese/English selector, multilingual README set, configuration and protocol documentation for the 0.5 behavior.
+
 ## Unreleased
 
 ### Changed

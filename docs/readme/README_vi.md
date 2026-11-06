@@ -4,125 +4,102 @@
 
 # MCKL Transfer
 
+### Thiết bị của bạn. Dữ liệu của bạn. Kết nối theo cách của bạn.
+
+Chuyển thư mục từ laptop. Để lại file cho người nhận đang offline. Gửi thẳng tới trình duyệt bên cạnh. Bạn nắm quyền quản lý máy chủ và cách dữ liệu được chia sẻ.
+
+**Tự host · Dùng bằng trình duyệt · Truyền có resume · Inbox riêng · WebRTC thử nghiệm**
+
+[Tải source](https://github.com/hieunguyenak92/MCKLTransfer/releases/latest) · [Bắt đầu](#mở-lên-và-chia-sẻ) · [Cấu hình](../CONFIGURATION.md) · [Star trên GitHub](https://github.com/hieunguyenak92/MCKLTransfer)
+
 </div>
 
-Chia sẻ file và chat qua máy chủ riêng trong LAN, hoặc giữa các thiết bị được cho phép trong mạng overlay. Chỉ máy chủ cần Node.js; các thiết bị còn lại mở trình duyệt. Không có tài khoản cloud của MCKL, analytics, database hay dependency npm runtime.
+MCKL Transfer biến một máy tính thành không gian chia sẻ cho các thiết bị của bạn và một nhóm nhỏ tin cậy. Chạy host, mở địa chỉ trên thiết bị khác và bắt đầu gửi. Các thiết bị dùng trình duyệt; chỉ host cần Node.js. Không cần tài khoản cloud của MCKL, analytics hay cài dependency npm runtime.
 
-**0.2.0-alpha.2 · Apache-2.0 · thử nghiệm.** Xem [kết quả xác minh](../VALIDATION.md) và [mô hình bảo mật](../../SECURITY.md) trước khi triển khai. Chưa có cam kết hỗ trợ ổn định hoặc tốc độ LAN trên mọi thiết bị.
+**Phiên bản 0.5.0 · Apache-2.0.** Chia sẻ qua hub dùng HTTP(S); truyền thẳng giữa trình duyệt là tính năng thử nghiệm, có yêu cầu trình duyệt cụ thể. Xem [bằng chứng kiểm thử](../VALIDATION.md) để biết phạm vi đã được xác minh.
 
-## Chạy nhanh trong mạng tin cậy
+## Giải quyết những việc nhỏ giữa nhiều thiết bị
 
-Cài Node.js **24 từ 24.22.2**, hoặc **26 từ 26.13.0**, đã cập nhật bản vá. Trong thư mục source:
+| Bạn cần | MCKL mang lại |
+|---|---|
+| “Chuyển file này sang máy kia.” | Kéo thả, tiến độ, tốc độ, ETA, tạm dừng, thử lại và tiếp tục theo chunk. |
+| “Họ sẽ lấy file sau.” | Hub giữ file; người nhận tải khi host còn hoạt động. |
+| “Chỉ gửi cho người này.” | Inbox theo người nhận hoặc phòng có thành viên cụ thể; server kiểm tra quyền truy cập. |
+| “Cho thiết bị này tham gia.” | QR/link tạo ngay tại host, dùng một lần và có hạn; có thể yêu cầu host duyệt. |
+| “Chuyển cả thư mục dự án.” | Giữ đường dẫn tương đối khi chọn thư mục; tải nhiều file bằng archive `.tar` theo luồng. |
+| “Gửi thẳng giữa hai trình duyệt.” | WebRTC tùy chọn, người nhận đồng ý, hai đầu so mã xác nhận và ghi dữ liệu xuống đĩa. |
+| “Biết file đã tới đâu.” | Lịch sử theo quyền truy cập, biên nhận khi lưu có xác minh và thông tin đường direct/relay. |
+| “Giữ host chạy gọn gàng.” | Quota byte/số file theo thiết bị, giới hạn download, hết hạn, thu hồi thiết bị và khóa một tiến trình ghi. |
+
+Giới hạn mặc định là **20 GiB/file**, host có thể điều chỉnh. File lớn qua hub được truyền theo chunk có giới hạn bộ nhớ. SHA-256 của nguồn, từng chunk và file hoàn tất giúp phát hiện sai lệch dữ liệu. Thử lại bước hoàn tất không xuất bản file trùng; lease upload điều phối quyền thao tác giữa các tab.
+
+## Mở lên và chia sẻ
+
+Cài Node.js đã cập nhật bản vá: **24 từ 24.22.2** hoặc **26 từ 26.13.0** (`^24.22.2 || ^26.13.0`).
 
 ```sh
+git clone https://github.com/hieunguyenak92/MCKLTransfer.git
+cd MCKLTransfer
 npm start
 ```
 
-Không cần `npm install`. Terminal hiển thị địa chỉ LAN, mã truy cập 6 số và **mã quản trị riêng**. Mở địa chỉ LAN trên thiết bị khác, đặt tên thiết bị và nhập mã truy cập. Chỉ cung cấp mã quản trị cho người quản lý máy chủ. Các mã không xuất hiện qua API, kể cả localhost.
+Không cần chạy `npm install`.
 
-Mặc định HTTP không mã hóa: chỉ dùng trên mạng bạn kiểm soát với những người tin cậy. Dùng HTTPS hoặc overlay được kiểm soát cho kết nối khác. Không chuyển tiếp cổng này từ router ra Internet.
+1. Đọc địa chỉ LAN và mã truy cập trong terminal.
+2. Mở địa chỉ đó trên thiết bị khác, đặt tên thiết bị và nhập mã 6 số.
+3. Chọn không gian chung, người nhận trong inbox hoặc phòng riêng. Thả file, chọn thư mục hoặc gửi chat.
 
-### Cách sử dụng
-
-- Chọn/kéo nhiều file; hàng đợi toàn ứng dụng truyền tối đa hai file cùng lúc, có tốc độ, ETA, tạm dừng, tiếp tục, thử lại và hủy.
-- Sau mất mạng hoặc tải lại trang, chọn lại đúng file để tiếp tục. Cần giữ cookie của thiết bị và upload chưa hết hạn. Trình duyệt không tự giữ quyền đọc file sau khi đóng trang.
-- Dùng **một tab truyền file cho mỗi máy chủ**. Các tab cùng origin dùng chung cookie và bản ghi resume; nếu hai tab cùng tiếp tục một upload, hủy ở tab này có thể xóa phần dở của tab kia. File nguồn vẫn an toàn; tab còn lại phải gửi lại khi gặp `404`. Bản alpha chưa điều phối quyền sở hữu upload giữa nhiều tab.
-- Trước khi gửi, trình duyệt đọc nguồn để tính SHA-256; từng chunk và file hoàn tất được đối chiếu tại host. Bước hash là một lượt đọc bổ sung, có thể chậm trên thiết bị yếu. Không giữ cả file trong RAM.
-- File hoàn tất xuất hiện trong danh sách chung; mọi thành viên đã đăng nhập có thể tải xuống. Thành viên chỉ xóa file do mình gửi; quản trị viên xóa được mọi file và thu hồi phiên thiết bị.
-- Chat chung giữ tối đa 200 tin trong RAM; mất khi khởi động lại host. Giữ trang mở khi truyền, nhất là trên điện thoại. PWA không đảm bảo truyền nền hay tiếp tục khi iOS khóa màn hình.
-
-Đây là mô hình **browser A → host lưu file → browser B tải về**. “Upload hoàn tất” nghĩa là host đã nhận và xác minh; không có nghĩa B đã tải/lưu file. Host đọc được cả file và chat; chưa có E2EE hoặc phòng riêng theo người nhận.
-
-## Ngôn ngữ
-
-Giao diện app có **Tiếng Việt** và **English**. Dùng bộ chọn ngôn ngữ trên thanh đầu trang; lựa chọn được lưu trên trình duyệt này. Lần đầu mở, app chọn theo ngôn ngữ trình duyệt và dùng English nếu không hỗ trợ. Đổi ngôn ngữ không tải lại trang hay dừng truyền file; nội dung file/chat/tên thiết bị không bị dịch. README có bảy ngôn ngữ qua các liên kết đầu trang.
-
-## Cấu hình
-
-Ứng dụng đọc biến môi trường của tiến trình; không tự nạp `.env`. Dung lượng tính bằng byte, thời gian bằng millisecond.
-
-| Biến | Mặc định | Ý nghĩa |
-|---|---|---|
-| `HOST`, `PORT` | `0.0.0.0`, `8787` | Interface và cổng lắng nghe; mặc định IPv4 |
-| `SHARE_DIR` | `./shared` cạnh source | Thư mục dữ liệu riêng, nên đặt ngoài repository |
-| `DEVICE_NAME` | hostname | Tên host, chỉ hiện sau đăng nhập và trong terminal |
-| `SHARE_CODE` | 6 số ngẫu nhiên mỗi lần chạy | Mã thành viên; `LAN_SHARE_CODE` vẫn được nhận để tương thích |
-| `ADMIN_CODE` | Ngẫu nhiên riêng mỗi lần chạy | Tối thiểu 24 ký tự; giữ bí mật |
-| `MAX_FILE_SIZE` | `21474836480` (20 GiB) | Giới hạn mỗi file |
-| `MAX_TOTAL_SIZE` | `107374182400` (100 GiB) | Tổng file hoàn tất và dung lượng upload đã đặt trước |
-| `MIN_FREE_SPACE` | `134217728` (128 MiB) | Dung lượng ổ trống dự phòng; không phải disk quota của OS |
-| `CHUNK_SIZE` | `4194304` (4 MiB) | Tối đa 16 MiB mỗi request upload chunk |
-| `MAX_CONCURRENT_UPLOADS` | `4` | Số tác vụ ghi/hash upload đồng thời ở server |
-| `MAX_PENDING_UPLOADS` | `128` | Số upload dở được giữ |
-| `UPLOAD_TTL_MS` | `86400000` (24 giờ) | Hạn tuyệt đối từ lúc tạo upload dở |
-| `SESSION_TTL_MS`, `MAX_DEVICES` | `43200000` (12 giờ), `128` | Phiên thường và tổng phiên thiết bị; ghi nhớ có hạn 30 ngày |
-| `REQUEST_TIMEOUT_MS` | `1800000` (30 phút) | Thời gian nhận một request; socket không hoạt động 60 giây bị ngắt |
-| `TLS_KEY_FILE`, `TLS_CERT_FILE` | Không đặt | Cặp private key/chứng chỉ PEM cho HTTPS trực tiếp |
-| `PUBLIC_URL` | Không đặt | Origin ngoài của proxy, ví dụ `https://transfer.example.org`; không path/query |
-| `ALLOWED_HOSTS` | Hostname/interface cục bộ | Thêm hostname/IP cụ thể, phân cách dấu phẩy; không wildcard hay port |
-
-Ví dụ PowerShell, dùng thư mục dữ liệu riêng:
-
-```powershell
-$env:SHARE_DIR = "D:\MCKL-data"
-$env:DEVICE_NAME = "Home transfer host"
-npm start
-```
-
-Mã đổi sau restart không thu hồi phiên đã cấp. Dùng bảng quản lý thiết bị để revoke; nếu lộ PIN, đổi PIN **và** thu hồi những phiên không tin cậy. Cookie và quyền sở hữu file được giữ qua restart. Đăng xuất/xóa cookie rồi ghép đôi lại tạo danh tính mới; quản trị viên vẫn xóa được file cũ.
-
-## HTTPS và kết nối khác mạng
-
-### HTTPS trực tiếp
-
-Cấp chứng chỉ có SAN khớp đúng hostname/IP đang dùng, từ CA mà mọi thiết bị tin cậy. Đặt key ngoài source, hạn chế quyền đọc, rồi cấu hình cả hai biến:
+Terminal còn hiển thị **mã quản trị riêng**. Dùng mã này để quản lý thiết bị, tạo phòng và lời mời; giữ bí mật. Bật duyệt thiết bị thành viên mới bằng:
 
 ```sh
-TLS_KEY_FILE=/secure/mckl/server.key TLS_CERT_FILE=/secure/mckl/server.pem npm start
+REQUIRE_APPROVAL=1 npm start
 ```
 
-Mở URL `https://...` tương ứng. Không bỏ qua lỗi xác minh chứng chỉ. Chứng chỉ tự ký cần quy trình cài trust CA/fingerprint qua kênh tin cậy; app chưa tự động pairing chứng chỉ. Cookie HTTPS có `Secure`, `HttpOnly`, `SameSite=Strict`.
+Trong bảng quản trị, tạo **lời mời 10 phút** rồi quét QR trên thiết bị còn lại. Mỗi lời mời dùng một lần; nếu bật duyệt, thiết bị chờ quản trị viên chấp nhận. QR được tạo tại máy và lời mời mất hiệu lực khi host dừng.
 
-### Nhóm riêng qua Tailscale hoặc WireGuard
+**HTTP mặc định truyền mã truy cập và nội dung file không mã hóa.** Chỉ dùng trên mạng tin cậy. Cấu hình HTTPS được các thiết bị tin cậy cho dữ liệu nhạy cảm và truyền trực tiếp; dùng Tailscale/WireGuard có kiểm soát quyền khi kết nối khác mạng. [Ví dụ triển khai và toàn bộ cấu hình →](../CONFIGURATION.md)
 
-Cài overlay trên các thiết bị, cấp quyền đúng thành viên và giới hạn cổng dịch vụ. Giữ xác thực của MCKL. Với WireGuard, bạn tự quản lý khóa, routing, firewall và DNS; với Tailscale, kiểm tra policy và đường direct/relay. Dải IP riêng không tự chứng minh thiết bị đáng tin cậy.
+## Hai cách chuyển file hữu ích
 
-Một lựa chọn HTTPS cho tailnet là [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve). Sau khi có tên DNS của host và đã cấu hình HTTPS trong tailnet, chạy MCKL chỉ trên loopback với origin đó:
+### Để file trên hub của bạn
 
-```sh
-HOST=127.0.0.1 PUBLIC_URL=https://YOUR-HOST.YOUR-TAILNET.ts.net npm start
-```
+Gửi một lần để người nhận lấy sau. Host cần hoạt động khi người nhận tải xuống. Tìm kiếm trong không gian hiện tại, chọn nhiều file để tải archive và đặt hạn tự xóa khi không cần giữ lâu.
 
-Trong terminal khác:
+Sau mất mạng hoặc tải lại trang, chọn lại **đúng file nguồn** để tiếp tục phần đã được xác nhận. Cần giữ cookie, bản ghi resume và upload chưa hết hạn. Tab đang giữ lease sẽ ngăn tab khác sửa cùng upload cho tới khi nhả lease hoặc đủ điều kiện chuyển quyền. Giữ trang mở khi truyền, đặc biệt trên điện thoại.
 
-```sh
-tailscale serve --bg http://127.0.0.1:8787
-tailscale serve status
-```
+Không gian chung cho các thành viên đã được phép đọc. File inbox riêng chỉ hiển thị cho người gửi, người nhận và quản trị viên host; phòng tùy chọn giới hạn các thành viên khác theo danh sách phòng. **Host được tin cậy và đọc được file/chat lưu trên hub.** Phân quyền này không phải mã hóa đầu cuối chống lại host.
 
-Mở đúng HTTPS URL Serve cấp. Dịch vụ này dành cho tailnet; giới hạn access policy của bạn. Xem [CLI Serve](https://tailscale.com/docs/reference/tailscale-cli/serve) cho điều kiện và cách tắt. MCKL không tự cài hoặc cấu hình Tailscale, và chưa được kiểm thử trên tailnet thật trong đợt phát hành này.
+### Gửi trực tiếp khi hai thiết bị đều online
 
-Reverse proxy khác cần chuyển tiếp stream/SSE không buffer, giữ Host hoặc đặt `PUBLIC_URL` đúng, cấu hình timeout/body size phù hợp, giới hạn upstream vào proxy tin cậy. App không tin `X-Forwarded-*` để xác định an toàn kết nối.
+Chọn người nhận rồi bấm **Gửi trực tiếp WebRTC**. Người nhận đồng ý và chọn nơi lưu. So sánh mã xác nhận trên hai thiết bị qua kênh tin cậy, sau đó cả hai cùng xác nhận trước khi nội dung file được gửi.
 
-## Dữ liệu, nâng cấp và sao lưu
+Máy nhận ghi từng chunk xuống đĩa và đối chiếu checksum. Giao diện báo đường WebRTC quan sát được khi trình duyệt cung cấp thống kê; TURN do bạn cấu hình có thể chuyển tiếp lưu lượng mã hóa khi không nối trực tiếp được. Mặc định không dùng dịch vụ STUN/TURN bên ngoài.
 
-Host giữ `.mckl-manifest.json`, `.mckl-devices.json` (hash token phiên), `.mckl-uploads.json` và `.mckl-objects/` trong `SHARE_DIR`. Payload mới lưu theo ID; tên hiển thị nằm trong manifest. Không chỉnh sửa/xóa file nội bộ khi server chạy. Không chạy hai tiến trình trên cùng `SHARE_DIR`.
+**Điều kiện:** HTTPS hoặc localhost, WebRTC và trình duyệt nhận hỗ trợ `showSaveFilePicker`—thường là Chromium trên desktop. Địa chỉ IP LAN qua HTTP không phải secure context. Safari/điện thoại vẫn dùng luồng hub; chưa cam kết nhận trực tiếp trên các thiết bị đó. Nếu truyền trực tiếp lỗi, người gửi có thể chủ động chọn gửi qua hub, tức lưu thêm bản sao tại host. App không âm thầm đổi chính sách lưu trữ.
 
-Dừng host trước khi sao lưu **toàn bộ** thư mục dữ liệu. Backup chứa file và quyền truy cập của nhóm, cần được bảo vệ. Bản alpha đọc manifest MVP cũ với regular file hợp lệ; không tự chuyển payload cũ sang object storage. File cũ không có owner chỉ quản trị viên xóa được. Sao lưu trước nâng cấp; downgrade không được hỗ trợ sau khi định dạng manifest mới được ghi.
+Mã so sánh xác minh kết nối của phiên này khi người dùng kiểm tra. Nó không bảo vệ client do host bị xâm nhập cung cấp và không tạo danh tính thiết bị vĩnh viễn.
 
-Chỉ dùng filesystem cục bộ đáng tin cậy với ACL chặt. Upload dở hết hạn được dọn; file hoàn tất không tự xóa. Chưa kiểm chứng network drive, đồng bộ cloud thư mục dữ liệu, mất điện thực hoặc storage phần cứng. Atomic rename/fsync không phải cam kết chống mọi hỏng hóc.
+## Những chi tiết giúp việc chia sẻ dễ chịu hơn
 
-## Nếu thiết bị khác không kết nối được
+- **Thư mục và batch:** kiểm tra đường dẫn tương đối; payload lưu bằng ID nội bộ. Tải TAR theo luồng, tối đa 100 file được chọn mỗi request. Không lưu thư mục rỗng.
+- **Hạn lưu:** giữ file hoặc chọn một giờ, một ngày, bảy ngày trong UI. File hết hạn không còn truy cập được và host dọn theo lịch; lịch sử có hạn riêng.
+- **Trạng thái nhận rõ ràng:** upload xong nghĩa là host đã xác minh. Download thường không chứng minh OS đã lưu file; trình duyệt hỗ trợ có thao tác lưu và đối chiếu checksum kèm biên nhận.
+- **Ngôn ngữ quen thuộc:** đổi **Tiếng Việt / English** không tải lại trang. README có bảy ngôn ngữ ở đầu trang.
+- **Đường mạng của bạn:** phép đo trong app kiểm tra đúng đường browser–host hiện tại. Tốc độ phụ thuộc thiết bị, ổ đĩa, hash, Wi-Fi và tuyến truyền; không có một thiết lập “nhanh nhất” cho mọi nơi.
 
-Chọn URL IPv4 LAN in trong terminal; cùng Wi-Fi và tránh guest/AP isolation. Kiểm tra firewall chỉ mở cổng cho mạng/thiết bị cần dùng. Kiểm tra health trên máy khác, thay địa chỉ mẫu:
+Chat giữ tối đa 200 tin trong RAM host và mất khi restart. PWA cache giao diện ứng dụng; không đảm bảo upload nền, tiếp tục khi iPhone khóa màn hình hay nhận file khi host tắt. MCKL Transfer không điều khiển desktop của thiết bị khác.
 
-```sh
-curl --connect-timeout 5 http://192.168.1.10:8787/api/health
-```
+## Vận hành và nâng cấp
 
-Đúng là `{"ok":true}`. Timeout thường cần kiểm tra routing/firewall; `403` cần kiểm tra hostname/Origin và `ALLOWED_HOSTS`/`PUBLIC_URL`. Không thêm wildcard để sửa lỗi. Trình duyệt có thể hỏi quyền truy cập mạng cục bộ.
+Dùng filesystem cục bộ đáng tin cậy, ưu tiên đặt dữ liệu ngoài thư mục source. **Dừng host sạch và sao lưu toàn bộ thư mục dữ liệu trước khi nâng cấp.** Không dự kiến hạ cấp metadata mới về phiên bản cũ. File chung hiện có vẫn là file chung; phòng riêng được tạo rõ ràng.
 
-## Phát triển, kiểm thử và phát hành
+Restart sạch giữ phiên còn hạn và quyền sở hữu. Sau lần dừng bất thường, cơ chế khôi phục phiên từ chối trạng thái cũ để bảo vệ quyền truy cập; thiết bị phải ghép đôi lại và có owner ID mới. Inbox/upload cũ có thể cần quản trị viên khôi phục. Bảo vệ backup và mã quản trị tương ứng.
+
+Khóa storage ngăn hai host ghi cùng thư mục. Có thể phục hồi owner local đã xác nhận process chết; lock mơ hồ hoặc hỏng sẽ bị từ chối. Không xóa lock khi host có thể vẫn chạy. Xem [cấu hình và phục hồi](../CONFIGURATION.md#data-upgrades-and-recovery).
+
+Nếu sau nâng cấp thấy màn hình recovery hoặc giao diện cũ, kết nối lại host và reload; hard refresh nếu shell cũ còn được cache. Đừng tùy tiện xóa cookie khi cần resume upload.
+
+## Cùng xây dựng MCKL Transfer
 
 ```sh
 npm run check
@@ -131,14 +108,12 @@ npm run release:check
 npm run release:source
 ```
 
-Source exporter chỉ lấy danh sách cho phép, kiểm tra lại archive và ghi SHA-256 vào `release/`. Không zip toàn bộ thư mục đang dùng. `.gitignore` không loại file khỏi ZIP của Finder và không gỡ dữ liệu đã commit. Giữ `private: true` để tránh publish npm nhầm; source vẫn được cấp phép Apache-2.0.
+Công cụ export tạo archive source theo allowlist và SHA-256 trong `release/`. Tránh nén toàn bộ thư mục làm việc cùng dữ liệu runtime hoặc thông tin truy cập.
 
-- [Đóng góp](../../CONTRIBUTING.md), [bảo mật](../../SECURITY.md), [checklist phát hành](../RELEASE_CHECKLIST.md).
-- [Giao thức alpha](../PROTOCOL.md), [bằng chứng và giới hạn xác minh](../VALIDATION.md).
-- [Kiến trúc](../research/architecture.md), [hiệu năng](../research/performance.md), [giấy phép và roadmap](../research/license-and-roadmap.md).
+[Đóng góp](../../CONTRIBUTING.md) · [Báo lỗi bảo mật](../../SECURITY.md) · [Giao thức](../PROTOCOL.md) · [Kiểm chứng](../VALIDATION.md) · [Nghiên cứu nâng cấp](../research/upgrade-audit-2026-11.md)
 
-Discovery/QR, WebRTC, clipboard theo thao tác, folder transfer và screen sharing là roadmap. Full remote desktop cần native agent và mô hình consent riêng; bản này chưa có remote control.
+Nếu MCKL Transfer giúp bạn bớt một lần upload cloud hoặc tìm dây cáp, **[hãy tặng dự án một star](https://github.com/hieunguyenak92/MCKLTransfer)**. Một lỗi tái hiện được, kết quả thử trình duyệt hay đóng góp nhỏ đều giúp việc chuyển qua lại giữa các thiết bị nhẹ nhàng hơn.
 
 ## Giấy phép
 
-[Apache License 2.0](../../LICENSE). Copyright 2026 hieunguyenak92; xem [NOTICE](../../NOTICE). Cho phép sử dụng, sửa đổi và phân phối theo điều khoản giấy phép, gồm sử dụng thương mại. Giữ LICENSE/NOTICE và ghi nhận thay đổi theo điều khoản áp dụng. Không có bảo hành.
+[Apache License 2.0](../../LICENSE), bản quyền 2026 hieunguyenak92. Được sử dụng thương mại, sửa đổi và phân phối theo điều khoản; giữ các notice bắt buộc. Thư viện QR đi kèm có giấy phép MIT; xem [NOTICE](../../NOTICE). Không có bảo hành.

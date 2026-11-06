@@ -41,3 +41,18 @@
 button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent2);outline-offset:4px}
 @media(max-width:600px){.transfer-item{flex-wrap:wrap}.transfer-item .item-main{flex-basis:calc(100% - 60px)}.transfer-actions{max-width:none;width:100%;margin-left:51px;justify-content:flex-start}.transport-notice{font-size:12px}.state>span:last-child{display:none}.role-label{font-size:11px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+
+/* Private workspaces and direct sessions */
+.workspace-controls { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:20px 0; padding:20px; }
+.workspace-controls .field { display:flex; flex-direction:column; gap:8px; }
+.workspace-controls p,.workspace-controls .button-row { grid-column:1/-1; }
+select,input[type=search],.room-form input { max-width:100%; padding:10px 12px; border:1px solid var(--line,#30425a); border-radius:10px; background:var(--card,#12223b); color:inherit; }
+.button-row,.file-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.file-toolbar { margin-bottom:16px; } .file-toolbar input { flex:1; min-width:140px; }
+.room-form { display:grid; gap:10px; margin:24px 0; } #roomMembers { display:flex; gap:14px; flex-wrap:wrap; }
+.invite-output { overflow-wrap:anywhere; margin-top:12px; } .invite-output svg { background:white; max-width:220px; display:block; margin:12px 0; }
+.direct-card { border:1px solid var(--line,#30425a); padding:16px; border-radius:14px; margin:10px 0; overflow-wrap:anywhere; }
+.direct-code { font:700 24px monospace; letter-spacing:3px; padding:12px 0; }
+.file-select { flex:0 0 auto; width:18px; height:18px; accent-color:#67e8f9; }
+#sharingAdmin { padding:20px; } .history-item { padding:10px 0; border-bottom:1px solid #ffffff12; overflow-wrap:anywhere; }
+@media(max-width:640px){ .workspace-controls{grid-template-columns:1fr;} .button-row .button{flex:1;} }

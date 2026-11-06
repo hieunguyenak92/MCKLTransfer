@@ -106,7 +106,7 @@ test('resumable uploads enforce ownership, offsets, chunk digests and final inte
   const file = await store.complete(transfer.id, OWNER);
   assert.equal(file.hash, hash(data));
   assert.deepEqual(await bytesOf(store, file.id), data);
-  await assert.rejects(store.head(transfer.id, OWNER), errorCode(404));
+  assert.equal((await store.head(transfer.id, OWNER)).state, 'complete');
   assert.equal(store.usage().reservedBytes, 0);
 });
 

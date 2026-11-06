@@ -1,5 +1,5 @@
-const CACHE = 'mckl-transfer-0.2.0-alpha.2';
-const ASSETS = ['/', '/styles.css', '/i18n.js', '/app.js', '/client.js', '/hash-worker.js', '/manifest.json', '/manifest.en.json'];
+const CACHE = 'mckl-transfer-0.5.0';
+const ASSETS = ['/', '/styles.css', '/i18n.js', '/app.js', '/client.js', '/workspace.js', '/direct.js', '/vendor/qrcodegen.js', '/hash-worker.js', '/manifest.json', '/manifest.en.json'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('mckl-transfer-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

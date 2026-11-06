@@ -19,7 +19,7 @@ test('the public app can load both locale manifests and its translation dependen
   const translationIndex = html.indexOf('src="/i18n.js"');
   const bootstrapIndex = html.indexOf('src="/app.js"');
   assert.ok(translationIndex >= 0 && bootstrapIndex >= 0 && translationIndex < bootstrapIndex);
-  assert.match(html, /data-app-version="0\.2\.0-alpha\.2"/);
+  assert.match(html, /data-app-version="0\.5\.0"/);
   for (const route of ['/i18n.js', '/app.js', '/client.js']) {
     const script = await fetch(base + route);
     assert.equal(script.status, 200);
@@ -48,5 +48,5 @@ test('the public app can load both locale manifests and its translation dependen
   await installing;
   for (const asset of ['/i18n.js', '/app.js', '/client.js', '/manifest.json', '/manifest.en.json']) assert.ok(cachedAssets.includes(asset), `offline shell includes ${asset}`);
   for (const asset of cachedAssets) assert.equal((await fetch(base + asset)).status, 200, `offline install can cache ${asset}`);
-  assert.equal(vm.runInContext('CACHE', context), 'mckl-transfer-0.2.0-alpha.2');
+  assert.equal(vm.runInContext('CACHE', context), 'mckl-transfer-0.5.0');
 });

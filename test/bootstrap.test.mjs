@@ -93,7 +93,11 @@ test('a complete current shell loads the client exactly once when i18n is alread
   assert.deepEqual(client.scripts.map(script => client.scriptPath(script)), ['/client.js']);
   client.scripts[0].onload();
   await settle();
-  assert.equal(client.scripts.length, 1);
+  assert.equal(client.scriptPath(client.scripts[1]), '/vendor/qrcodegen.js');
+  client.scripts[1].onload(); await settle();
+  assert.equal(client.scriptPath(client.scripts[2]), '/workspace.js');
+  client.scripts[2].onload(); await settle();
+  assert.equal(client.scripts.length, 3);
   assert.equal(client.document.body.textContent, 'Cached application shell');
   assert.equal(client.fetches, 0);
   assert.equal(client.reloads, 0);
@@ -109,7 +113,11 @@ test('a current shell missing i18n loads the dependency before the client', asyn
   assert.deepEqual(client.scripts.map(script => client.scriptPath(script)), ['/i18n.js', '/client.js']);
   client.scripts[1].onload();
   await settle();
-  assert.equal(client.scripts.length, 2);
+  assert.equal(client.scriptPath(client.scripts[2]), '/vendor/qrcodegen.js');
+  client.scripts[2].onload(); await settle();
+  assert.equal(client.scriptPath(client.scripts[3]), '/workspace.js');
+  client.scripts[3].onload(); await settle();
+  assert.equal(client.scripts.length, 4);
   assert.equal(client.document.body.textContent, 'Cached application shell');
   assert.equal(client.reloads, 0);
 });

@@ -1,6 +1,6 @@
 {
   "name": "mckl-transfer",
-  "version": "0.2.0-alpha.2",
+  "version": "0.5.0",
   "description": "Lightweight, private LAN file sharing for Windows, macOS and iPhone browsers",
   "type": "module",
   "license": "Apache-2.0",
